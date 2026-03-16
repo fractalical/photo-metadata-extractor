@@ -1,0 +1,111 @@
+# docker-compose.yml — Photo Metadata Extractor
+#
+# Usage:
+#   # AMD Ryzen AI (8845HS, 7840HS, Ryzen AI 300, etc.)
+#   PHOTOS_DIR=/path/to/photos docker compose --profile amd up --build
+#
+#   # Intel (Meteor Lake, Arrow Lake, Lunar Lake)
+#   PHOTOS_DIR=/path/to/photos docker compose --profile intel up --build
+#
+#   # CPU only (any hardware, no NPU)
+#   PHOTOS_DIR=/path/to/photos docker compose --profile cpu up --build
+
+services:
+  # ── AMD Ryzen AI (XDNA NPU) ──────────────────────────────────
+  extractor-amd:
+    profiles: ["amd"]
+    build:
+      context: .
+      dockerfile: Dockerfile.amd
+    container_name: photo-metadata-extractor
+
+    volumes:
+      - ${PHOTOS_DIR:-.}/:/data:rw
+      - model-cache:/app/models
+      # Mount host Vitis AI runtime if installed
+      # - /opt/ryzen-ai:/opt/ryzen-ai:ro
+
+    environment:
+      - PME_ROOT_DIR=/data
+      - PME_EXECUTION_PROVIDER=auto
+      - PME_NPU_DEVICE=${NPU_DEVICE:-NPU}
+      - PME_NUM_COLORS=${NUM_COLORS:-5}
+      - PME_SKIP_EXISTING=${SKIP_EXISTING:-true}
+
+    # AMD XDNA NPU device passthrough
+    # Requires: amdxdna kernel driver + XRT on host
+    devices:
+      - /dev/accel:/dev/accel
+
+    group_add:
+      - video
+      - render
+
+    deploy:
+      resources:
+        limits:
+          memory: 4G
+        reservations:
+          memory: 1G
+
+  # ── Intel NPU (OpenVINO) ─────────────────────────────────────
+  extractor-intel:
+    profiles: ["intel"]
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: photo-metadata-extractor
+
+    volumes:
+      - ${PHOTOS_DIR:-.}/:/data:rw
+      - model-cache:/app/models
+
+    environment:
+      - PME_ROOT_DIR=/data
+      - PME_EXECUTION_PROVIDER=OpenVINOExecutionProvider
+      - PME_NPU_DEVICE=${NPU_DEVICE:-NPU}
+      - PME_NUM_COLORS=${NUM_COLORS:-5}
+      - PME_SKIP_EXISTING=${SKIP_EXISTING:-true}
+
+    devices:
+      - /dev/accel:/dev/accel
+
+    group_add:
+      - video
+      - render
+
+    deploy:
+      resources:
+        limits:
+          memory: 4G
+        reservations:
+          memory: 1G
+
+  # ── CPU only (universal) ─────────────────────────────────────
+  extractor-cpu:
+    profiles: ["cpu"]
+    build:
+      context: .
+      dockerfile: Dockerfile.amd  # lighter image, no OpenVINO
+    container_name: photo-metadata-extractor
+
+    volumes:
+      - ${PHOTOS_DIR:-.}/:/data:rw
+      - model-cache:/app/models
+
+    environment:
+      - PME_ROOT_DIR=/data
+      - PME_EXECUTION_PROVIDER=CPUExecutionProvider
+      - PME_NUM_COLORS=${NUM_COLORS:-5}
+      - PME_SKIP_EXISTING=${SKIP_EXISTING:-true}
+
+    deploy:
+      resources:
+        limits:
+          memory: 4G
+        reservations:
+          memory: 1G
+
+volumes:
+  model-cache:
+    driver: local

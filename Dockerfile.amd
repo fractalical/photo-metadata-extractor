@@ -1,0 +1,82 @@
+# ==============================================================================
+# Photo Metadata Extractor — AMD Ryzen AI (XDNA NPU) support
+# ==============================================================================
+# This Dockerfile is for AMD Ryzen AI processors (7040/8040/AI 300 series).
+#
+# IMPORTANT: AMD XDNA NPU on Linux requires:
+#   1. Host kernel with amdxdna driver (Linux 6.7+ has basic support)
+#   2. AMD XRT runtime installed on host
+#   3. NPU firmware in /lib/firmware/amdnpu/
+#   4. Device passthrough: /dev/accel
+#
+# For full NPU support, the recommended path is:
+#   - Windows: Install Ryzen AI Software SDK (most mature)
+#   - Linux: Install XDNA driver + build onnxruntime-vitisai from source
+#
+# This image provides CPU fallback out of the box, with NPU support
+# when the host environment provides the Vitis AI runtime.
+# ==============================================================================
+
+FROM python:3.12-slim AS builder
+
+WORKDIR /build
+
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends build-essential && \
+    rm -rf /var/lib/apt/lists/*
+
+COPY pyproject.toml .
+COPY src/ src/
+
+# Install base deps (without onnxruntime-openvino since we're on AMD)
+# Replace onnxruntime-openvino with plain onnxruntime
+RUN pip install --no-cache-dir --prefix=/install \
+    numpy "numpy<2.0.0" \
+    opencv-python-headless \
+    scikit-learn \
+    Pillow \
+    pydantic pydantic-settings \
+    tqdm loguru webcolors \
+    onnxruntime
+
+# --- Runtime ---
+FROM python:3.12-slim AS runtime
+
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends \
+        libgl1 \
+        libglib2.0-0 \
+        libgomp1 \
+    && rm -rf /var/lib/apt/lists/*
+
+COPY --from=builder /install /usr/local
+
+WORKDIR /app
+COPY src/ src/
+
+RUN mkdir -p /app/models
+
+# NOTE: For actual NPU execution, you need to install onnxruntime
+# built with VitisAI support. This is currently not available as a
+# pip package for Linux. Options:
+#
+# 1. Build from source:
+#    https://onnxruntime.ai/docs/build/eps.html#vitis-ai
+#
+# 2. Use AMD's pre-built wheels (if available for your platform):
+#    pip install onnxruntime-vitisai
+#
+# 3. Mount the Vitis AI runtime from the host:
+#    docker run -v /opt/ryzen-ai:/opt/ryzen-ai ...
+#
+# Without VitisAI EP, the app will gracefully fall back to CPU.
+
+ENV PME_ROOT_DIR=/data \
+    PME_MODEL_CACHE_DIR=/app/models \
+    PME_EXECUTION_PROVIDER=auto \
+    PME_NPU_DEVICE=NPU
+
+HEALTHCHECK --interval=30s --timeout=5s \
+    CMD python -c "import src.main" || exit 1
+
+ENTRYPOINT ["python", "-m", "src.main"]
