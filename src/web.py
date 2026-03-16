@@ -72,12 +72,15 @@ def _run_extraction(root_dir: str, skip_existing: bool, num_colors: int) -> None
             num_colors=num_colors,
         )
 
+        # Store CSV in the scanned directory; record location in /data/.pme_last_scan
+        csv_path = Path(root_dir) / config.csv_filename
+
         scans = scan_directory(config)
         if not scans:
             logger.info("Изображения не найдены.")
             return
 
-        existing = load_existing_records(config.csv_path) if skip_existing else {}
+        existing = load_existing_records(csv_path) if skip_existing else {}
 
         to_process = []
         for scan in scans:
@@ -128,9 +131,10 @@ def _run_extraction(root_dir: str, skip_existing: bool, num_colors: int) -> None
                 _state["progress"] += 1
 
             if processed % config.batch_size == 0 and processed > 0:
-                save_records(config.csv_path, list(all_records.values()))
+                save_records(csv_path, list(all_records.values()))
 
-        save_records(config.csv_path, list(all_records.values()))
+        save_records(csv_path, list(all_records.values()))
+        Path("/data/.pme_last_scan").write_text(str(csv_path), encoding="utf-8")
 
         elapsed = time.monotonic() - _state["start_time"]
         logger.info(f"Готово! Обработано {processed} изображений за {elapsed:.1f}s")
@@ -169,8 +173,8 @@ async def photo_page(request: Request, photo_id: int):
 
 
 @app.get("/api/photos")
-async def get_photos():
-    return JSONResponse(_read_csv())
+async def get_photos(dir: str | None = None):
+    return JSONResponse(_read_csv(dir))
 
 
 @app.get("/api/photo/{photo_id}")
@@ -182,10 +186,14 @@ async def get_photo(photo_id: int):
     return JSONResponse(photo)
 
 
-@app.get("/api/image")
-async def serve_image(path: str):
-    abs_path = Path(path).resolve()
-    allowed_roots = [Path("/data").resolve(), Path("/host").resolve()]
+@app.get("/api/image/{photo_id}")
+async def serve_image(photo_id: int):
+    photos = _read_csv()
+    photo = next((p for p in photos if p["id"] == photo_id), None)
+    if photo is None:
+        raise HTTPException(404, "Фото не найдено")
+    abs_path = Path(photo["absolute_path"]).resolve()
+    allowed_roots = [Path("/data").resolve()]
     if not any(str(abs_path).startswith(str(r)) for r in allowed_roots):
         raise HTTPException(403, "Доступ запрещён")
     if not abs_path.exists():
@@ -219,13 +227,13 @@ async def get_status():
 
 
 @app.get("/api/browse")
-async def browse(path: str = "/host"):
-    host_root = Path("/host").resolve()
+async def browse(path: str = "/data"):
+    data_root = Path("/data").resolve()
     abs_path = Path(path).resolve()
 
-    # Allow browsing only within /host (mounted host /home)
-    if not str(abs_path).startswith(str(host_root)):
-        abs_path = host_root
+    # Allow browsing only within /data
+    if not str(abs_path).startswith(str(data_root)):
+        abs_path = data_root
     if not abs_path.exists() or not abs_path.is_dir():
         raise HTTPException(404, "Директория не найдена")
 
@@ -237,7 +245,7 @@ async def browse(path: str = "/host"):
     except PermissionError:
         pass
 
-    parent = str(abs_path.parent) if abs_path != host_root else None
+    parent = str(abs_path.parent) if abs_path != data_root else None
     return JSONResponse({"path": str(abs_path), "parent": parent, "dirs": dirs})
 
 
@@ -254,10 +262,16 @@ async def get_config():
 # ── Helpers ───────────────────────────────────────────────────────────────────
 
 
-def _read_csv() -> list[dict]:
-    root_dir = os.environ.get("PME_ROOT_DIR", "/data")
+def _read_csv(root_dir: str | None = None) -> list[dict]:
     csv_filename = os.environ.get("PME_CSV_FILENAME", "photo_metadata.csv")
-    csv_path = Path(root_dir) / csv_filename
+    if root_dir:
+        csv_path = Path(root_dir) / csv_filename
+    else:
+        last_scan = Path("/data/.pme_last_scan")
+        if last_scan.exists():
+            csv_path = Path(last_scan.read_text(encoding="utf-8").strip())
+        else:
+            csv_path = Path(os.environ.get("PME_ROOT_DIR", "/data")) / csv_filename
 
     if not csv_path.exists():
         return []

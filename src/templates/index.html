@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="ru">
+<html lang="en">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -55,7 +55,21 @@ body {
 }
 .header-logo { color: var(--accent); flex-shrink: 0; }
 .header h1 { font-size: 16px; font-weight: 600; letter-spacing: -0.01em; }
-.header-status { margin-left: auto; }
+.header-right { margin-left: auto; display: flex; align-items: center; gap: 10px; }
+
+.lang-btn {
+  background: none;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 4px 10px;
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--text-muted);
+  cursor: pointer;
+  letter-spacing: .06em;
+  transition: border-color .15s, color .15s;
+}
+.lang-btn:hover { border-color: var(--accent); color: var(--accent); }
 
 .status-badge {
   display: inline-flex;
@@ -66,7 +80,7 @@ body {
   font-size: 12px;
   font-weight: 500;
 }
-.status-idle  { background: rgba(52,199,89,0.12);  color: #34c759; }
+.status-idle    { background: rgba(52,199,89,0.12); color: #34c759; }
 .status-running { background: rgba(255,149,0,0.15); color: var(--warning); }
 .status-dot { width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
 .status-dot.pulse { animation: pulse 1s ease-in-out infinite; }
@@ -123,26 +137,11 @@ body {
   grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
   gap: 16px;
 }
-.config-item label {
-  font-size: 12px;
-  color: var(--text-muted);
-  display: block;
-  margin-bottom: 3px;
-}
-.config-item span {
-  font-size: 13px;
-  font-weight: 500;
-  font-family: ui-monospace, 'SF Mono', Menlo, monospace;
-  word-break: break-all;
-}
+.config-item label { font-size: 12px; color: var(--text-muted); display: block; margin-bottom: 3px; }
+.config-item span { font-size: 13px; font-weight: 500; font-family: ui-monospace, 'SF Mono', Menlo, monospace; word-break: break-all; }
 
 /* ── Form ── */
-.form-row {
-  display: flex;
-  align-items: flex-end;
-  gap: 12px;
-  flex-wrap: wrap;
-}
+.form-row { display: flex; align-items: flex-end; gap: 12px; flex-wrap: wrap; }
 .form-group { display: flex; flex-direction: column; gap: 5px; }
 .form-group label { font-size: 13px; font-weight: 500; }
 
@@ -160,13 +159,7 @@ input[type="text"] { width: 300px; }
 input[type="number"] { width: 76px; }
 input:focus { border-color: var(--accent); }
 
-.checkbox-row {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding-bottom: 1px;
-  cursor: pointer;
-}
+.checkbox-row { display: flex; align-items: center; gap: 8px; padding-bottom: 1px; cursor: pointer; }
 .checkbox-row input { width: 15px; height: 15px; cursor: pointer; accent-color: var(--accent); }
 .checkbox-row span { font-size: 14px; }
 
@@ -188,11 +181,7 @@ input:focus { border-color: var(--accent); }
 .btn:disabled { opacity: .45; cursor: not-allowed; }
 .btn-primary { background: var(--accent); color: #fff; }
 .btn-primary:hover:not(:disabled) { opacity: .88; }
-.btn-ghost {
-  background: transparent;
-  border: 1px solid var(--border);
-  color: var(--text);
-}
+.btn-ghost { background: transparent; border: 1px solid var(--border); color: var(--text); }
 .btn-ghost:hover:not(:disabled) { background: var(--bg); }
 
 /* ── Progress ── */
@@ -213,21 +202,17 @@ input:focus { border-color: var(--accent); }
   scroll-behavior: smooth;
 }
 .log-line { display: flex; gap: 10px; }
-.log-time  { color: #636366; flex-shrink: 0; }
-.log-INFO  { color: #30d158; flex-shrink: 0; min-width: 50px; }
+.log-time    { color: #636366; flex-shrink: 0; }
+.log-INFO    { color: #30d158; flex-shrink: 0; min-width: 50px; }
 .log-WARNING { color: #ff9f0a; flex-shrink: 0; min-width: 50px; }
-.log-ERROR { color: #ff453a; flex-shrink: 0; min-width: 50px; }
-.log-text  { color: #e5e5ea; }
+.log-ERROR   { color: #ff453a; flex-shrink: 0; min-width: 50px; }
+.log-text    { color: #e5e5ea; }
 .log-placeholder { color: #636366; }
 
 /* ── Photos tab ── */
-.toolbar {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  margin-bottom: 16px;
-  flex-wrap: wrap;
-}
+.toolbar { display: flex; align-items: center; gap: 12px; margin-bottom: 16px; flex-wrap: wrap; }
+.search-wrap { position: relative; }
+.search-wrap svg { position: absolute; left: 10px; top: 50%; transform: translateY(-50%); color: var(--text-muted); pointer-events: none; }
 .search-input {
   background: var(--bg-card);
   border: 1px solid var(--border);
@@ -239,18 +224,11 @@ input:focus { border-color: var(--accent); }
   width: 280px;
   transition: border-color .15s;
 }
-.search-wrap { position: relative; }
-.search-wrap svg { position: absolute; left: 10px; top: 50%; transform: translateY(-50%); color: var(--text-muted); pointer-events: none; }
 .search-input:focus { border-color: var(--accent); }
 .count-label { font-size: 13px; color: var(--text-muted); }
 
 /* ── Table ── */
-.table-wrap {
-  background: var(--bg-card);
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  overflow: hidden;
-}
+.table-wrap { background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; }
 table { width: 100%; border-collapse: collapse; }
 thead th {
   padding: 11px 16px;
@@ -264,15 +242,10 @@ thead th {
   white-space: nowrap;
   background: var(--bg-card);
 }
-tbody tr {
-  border-bottom: 1px solid var(--border);
-  cursor: pointer;
-  transition: background .1s;
-}
+tbody tr { border-bottom: 1px solid var(--border); cursor: pointer; transition: background .1s; }
 tbody tr:last-child { border-bottom: none; }
 tbody tr:hover { background: color-mix(in srgb, var(--accent) 6%, transparent); }
 tbody td { padding: 11px 16px; font-size: 14px; vertical-align: middle; }
-
 .cell-name { font-weight: 500; max-width: 220px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .cell-dim  { font-family: ui-monospace, monospace; font-size: 12px; color: var(--text-muted); white-space: nowrap; }
 .cell-date { font-size: 12px; color: var(--text-muted); white-space: nowrap; }
@@ -290,8 +263,7 @@ tbody td { padding: 11px 16px; font-size: 14px; vertical-align: middle; }
 }
 .colors { display: flex; gap: 3px; align-items: center; }
 .color-dot {
-  width: 18px;
-  height: 18px;
+  width: 18px; height: 18px;
   border-radius: 50%;
   border: 1.5px solid rgba(128,128,128,.25);
   flex-shrink: 0;
@@ -301,134 +273,48 @@ tbody td { padding: 11px 16px; font-size: 14px; vertical-align: middle; }
 
 /* ── File Manager Modal ── */
 .modal-overlay {
-  position: fixed;
-  inset: 0;
+  position: fixed; inset: 0;
   background: rgba(0,0,0,.5);
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  display: flex; align-items: center; justify-content: center;
   z-index: 100;
   backdrop-filter: blur(4px);
-  opacity: 0;
-  pointer-events: none;
+  opacity: 0; pointer-events: none;
   transition: opacity .2s;
 }
 .modal-overlay.open { opacity: 1; pointer-events: all; }
-
 .modal {
   background: var(--bg-card);
   border: 1px solid var(--border);
   border-radius: var(--radius);
-  width: 520px;
-  max-width: calc(100vw - 32px);
-  max-height: 80vh;
-  display: flex;
-  flex-direction: column;
-  transform: translateY(12px);
-  transition: transform .2s;
+  width: 520px; max-width: calc(100vw - 32px); max-height: 80vh;
+  display: flex; flex-direction: column;
+  transform: translateY(12px); transition: transform .2s;
   box-shadow: 0 20px 60px rgba(0,0,0,.3);
 }
 .modal-overlay.open .modal { transform: translateY(0); }
-
-.modal-header {
-  padding: 16px 20px;
-  border-bottom: 1px solid var(--border);
-  display: flex;
-  align-items: center;
-  gap: 10px;
-}
+.modal-header { padding: 16px 20px; border-bottom: 1px solid var(--border); display: flex; align-items: center; gap: 10px; }
 .modal-header h2 { font-size: 15px; font-weight: 600; }
-.modal-close {
-  margin-left: auto;
-  background: none;
-  border: none;
-  color: var(--text-muted);
-  cursor: pointer;
-  padding: 4px;
-  border-radius: 6px;
-  display: flex;
-  transition: background .15s;
-}
+.modal-close { margin-left: auto; background: none; border: none; color: var(--text-muted); cursor: pointer; padding: 4px; border-radius: 6px; display: flex; transition: background .15s; }
 .modal-close:hover { background: var(--border); }
-
-.modal-breadcrumb {
-  padding: 10px 20px;
-  border-bottom: 1px solid var(--border);
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  flex-wrap: wrap;
-  font-size: 13px;
-}
+.modal-breadcrumb { padding: 10px 20px; border-bottom: 1px solid var(--border); display: flex; align-items: center; gap: 4px; flex-wrap: wrap; font-size: 13px; }
 .breadcrumb-sep { color: var(--text-muted); }
-.breadcrumb-part {
-  color: var(--accent);
-  cursor: pointer;
-  padding: 2px 4px;
-  border-radius: 4px;
-  transition: background .12s;
-}
+.breadcrumb-part { color: var(--accent); cursor: pointer; padding: 2px 4px; border-radius: 4px; transition: background .12s; }
 .breadcrumb-part:hover { background: color-mix(in srgb, var(--accent) 10%, transparent); }
 .breadcrumb-part.current { color: var(--text); cursor: default; font-weight: 500; }
 .breadcrumb-part.current:hover { background: none; }
-
-.modal-body {
-  overflow-y: auto;
-  flex: 1;
-  padding: 8px 0;
-}
-
-.dir-item {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 9px 20px;
-  cursor: pointer;
-  transition: background .1s;
-  font-size: 14px;
-  user-select: none;
-}
+.modal-body { overflow-y: auto; flex: 1; padding: 8px 0; }
+.dir-item { display: flex; align-items: center; gap: 10px; padding: 9px 20px; cursor: pointer; transition: background .1s; font-size: 14px; user-select: none; }
 .dir-item:hover { background: color-mix(in srgb, var(--accent) 6%, transparent); }
 .dir-item svg { color: var(--accent); flex-shrink: 0; }
 .dir-item span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-
-.dir-up {
-  border-bottom: 1px solid var(--border);
-  color: var(--text-muted);
-  margin-bottom: 4px;
-}
+.dir-up { border-bottom: 1px solid var(--border); color: var(--text-muted); margin-bottom: 4px; }
 .dir-up svg { color: var(--text-muted); }
-
-.dir-empty {
-  padding: 32px 20px;
-  text-align: center;
-  color: var(--text-muted);
-  font-size: 14px;
-}
-
-.modal-footer {
-  padding: 14px 20px;
-  border-top: 1px solid var(--border);
-  display: flex;
-  align-items: center;
-  gap: 10px;
-}
-.modal-footer .selected-path {
-  font-size: 12px;
-  font-family: ui-monospace, monospace;
-  color: var(--text-muted);
-  flex: 1;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
+.dir-empty { padding: 32px 20px; text-align: center; color: var(--text-muted); font-size: 14px; }
+.modal-footer { padding: 14px 20px; border-top: 1px solid var(--border); display: flex; align-items: center; gap: 10px; }
+.modal-footer .selected-path { font-size: 12px; font-family: ui-monospace, monospace; color: var(--text-muted); flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
 /* ── Empty state ── */
-.empty {
-  text-align: center;
-  padding: 56px 24px;
-  color: var(--text-muted);
-}
+.empty { text-align: center; padding: 56px 24px; color: var(--text-muted); }
 .empty svg { opacity: .3; margin-bottom: 12px; }
 .empty p { font-size: 15px; line-height: 1.6; }
 </style>
@@ -442,17 +328,18 @@ tbody td { padding: 11px 16px; font-size: 14px; vertical-align: middle; }
     <path d="M3 17 7 13 11 17 15 11 19 17"/>
   </svg>
   <h1>Photo Metadata Extractor</h1>
-  <div class="header-status">
+  <div class="header-right">
+    <button class="lang-btn" id="lang-btn" onclick="toggleLang()">RU</button>
     <span id="status-badge" class="status-badge status-idle">
       <span class="status-dot" id="status-dot"></span>
-      <span id="status-text">Готов</span>
+      <span id="status-text" data-i18n="status.idle"></span>
     </span>
   </div>
 </div>
 
 <div class="tabs">
-  <button class="tab-btn active" onclick="switchTab('run', this)">Запуск</button>
-  <button class="tab-btn" onclick="switchTab('photos', this)">Фотографии</button>
+  <button class="tab-btn active" id="tab-btn-run"   onclick="switchTab('run', this)"    data-i18n="tab.run"></button>
+  <button class="tab-btn"        id="tab-btn-photos" onclick="switchTab('photos', this)" data-i18n="tab.photos"></button>
 </div>
 
 <div class="container">
@@ -461,54 +348,54 @@ tbody td { padding: 11px 16px; font-size: 14px; vertical-align: middle; }
   <div id="tab-run" class="tab-panel active">
 
     <div class="card">
-      <div class="card-title">Текущая конфигурация</div>
+      <div class="card-title" data-i18n="config.title"></div>
       <div class="config-grid">
-        <div class="config-item"><label>Директория фото</label><span id="cfg-dir">—</span></div>
-        <div class="config-item"><label>Провайдер</label><span id="cfg-provider">—</span></div>
-        <div class="config-item"><label>Цветов</label><span id="cfg-colors">—</span></div>
+        <div class="config-item"><label data-i18n="config.dir"></label><span id="cfg-dir">—</span></div>
+        <div class="config-item"><label data-i18n="config.provider"></label><span id="cfg-provider">—</span></div>
+        <div class="config-item"><label data-i18n="config.colors"></label><span id="cfg-colors">—</span></div>
       </div>
     </div>
 
     <div class="card">
-      <div class="card-title">Параметры запуска</div>
+      <div class="card-title" data-i18n="params.title"></div>
       <div class="form-row">
         <div class="form-group">
-          <label for="inp-dir">Директория для сканирования</label>
+          <label for="inp-dir" data-i18n="params.dir"></label>
           <div style="display:flex;gap:6px">
-            <input id="inp-dir" type="text" value="/data" placeholder="/home/artur/Pictures">
-            <button type="button" class="btn btn-ghost" onclick="openFileMgr()" title="Выбрать папку">
+            <input id="inp-dir" type="text" value="/data">
+            <button type="button" class="btn btn-ghost" onclick="openFileMgr()" title="">
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                 <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/>
               </svg>
-              Обзор
+              <span data-i18n="btn.browse"></span>
             </button>
           </div>
         </div>
         <div class="form-group">
-          <label for="inp-colors">Цветов</label>
+          <label for="inp-colors" data-i18n="params.colors"></label>
           <input id="inp-colors" type="number" min="1" max="10" value="5">
         </div>
         <label class="checkbox-row">
           <input type="checkbox" id="inp-skip" checked>
-          <span>Пропустить обработанные</span>
+          <span data-i18n="params.skip"></span>
         </label>
         <button id="run-btn" class="btn btn-primary" onclick="startRun()">
           <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor"><polygon points="5,3 19,12 5,21"/></svg>
-          Запустить
+          <span data-i18n="btn.run"></span>
         </button>
       </div>
     </div>
 
     <div class="card" id="progress-card" style="display:none">
-      <div class="card-title">Прогресс</div>
+      <div class="card-title" data-i18n="progress.title"></div>
       <div class="progress-wrap"><div class="progress-bar" id="progress-bar"></div></div>
-      <div class="progress-meta" id="progress-meta">0 / 0 изображений</div>
+      <div class="progress-meta" id="progress-meta"></div>
     </div>
 
     <div class="card">
-      <div class="card-title">Логи</div>
+      <div class="card-title" data-i18n="logs.title"></div>
       <div class="log-term" id="log-term">
-        <div class="log-line"><span class="log-placeholder">Ожидание запуска…</span></div>
+        <div class="log-line"><span class="log-placeholder" id="log-placeholder" data-i18n="logs.placeholder"></span></div>
       </div>
     </div>
 
@@ -522,7 +409,7 @@ tbody td { padding: 11px 16px; font-size: 14px; vertical-align: middle; }
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
           <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
         </svg>
-        <input class="search-input" id="search-inp" type="text" placeholder="Поиск по названию или категории…" oninput="filterPhotos()">
+        <input class="search-input" id="search-inp" type="text" oninput="filterPhotos()">
       </div>
       <span class="count-label" id="photos-count"></span>
       <button class="btn btn-ghost" onclick="loadPhotos()" style="margin-left:auto">
@@ -530,7 +417,7 @@ tbody td { padding: 11px 16px; font-size: 14px; vertical-align: middle; }
           <polyline points="23 4 23 10 17 10"/>
           <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/>
         </svg>
-        Обновить
+        <span data-i18n="btn.refresh"></span>
       </button>
     </div>
 
@@ -538,12 +425,12 @@ tbody td { padding: 11px 16px; font-size: 14px; vertical-align: middle; }
       <table>
         <thead>
           <tr>
-            <th>#</th>
-            <th>Название</th>
-            <th>Разрешение</th>
-            <th>Категории</th>
-            <th>Цвета</th>
-            <th>Обработано</th>
+            <th data-i18n="col.id"></th>
+            <th data-i18n="col.name"></th>
+            <th data-i18n="col.resolution"></th>
+            <th data-i18n="col.categories"></th>
+            <th data-i18n="col.colors"></th>
+            <th data-i18n="col.date"></th>
           </tr>
         </thead>
         <tbody id="photos-tbody"></tbody>
@@ -556,7 +443,7 @@ tbody td { padding: 11px 16px; font-size: 14px; vertical-align: middle; }
         <circle cx="12" cy="11" r="3"/>
         <path d="M3 17 7 13 11 17 15 11 19 17"/>
       </svg>
-      <p>Нет обработанных фото.<br>Перейдите на вкладку «Запуск» и запустите обработку.</p>
+      <p id="empty-text"></p>
     </div>
 
   </div>
@@ -569,7 +456,7 @@ tbody td { padding: 11px 16px; font-size: 14px; vertical-align: middle; }
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
         <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/>
       </svg>
-      <h2>Выбор директории</h2>
+      <h2 data-i18n="fm.title"></h2>
       <button class="modal-close" onclick="closeFileMgr()">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
           <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
@@ -579,25 +466,120 @@ tbody td { padding: 11px 16px; font-size: 14px; vertical-align: middle; }
     <div class="modal-breadcrumb" id="fm-breadcrumb"></div>
     <div class="modal-body" id="fm-body"></div>
     <div class="modal-footer">
-      <span class="selected-path" id="fm-selected-path">/data</span>
-      <button class="btn btn-ghost" onclick="closeFileMgr()">Отмена</button>
-      <button class="btn btn-primary" onclick="confirmDir()">Выбрать</button>
+      <span class="selected-path" id="fm-selected-path"></span>
+      <button class="btn btn-ghost" onclick="closeFileMgr()" data-i18n="btn.cancel"></button>
+      <button class="btn btn-primary" onclick="confirmDir()" data-i18n="btn.select"></button>
     </div>
   </div>
 </div>
 
 <script>
+// ── i18n ──────────────────────────────────────────────────────────────────────
+const T = {
+  en: {
+    'status.idle': 'Ready', 'status.running': 'Processing…',
+    'tab.run': 'Run', 'tab.photos': 'Photos',
+    'config.title': 'Configuration', 'config.dir': 'Photos directory',
+    'config.provider': 'Provider', 'config.colors': 'Colors',
+    'params.title': 'Run parameters', 'params.dir': 'Scan directory',
+    'params.colors': 'Colors', 'params.skip': 'Skip already processed',
+    'btn.browse': 'Browse', 'btn.run': 'Run', 'btn.refresh': 'Refresh',
+    'btn.cancel': 'Cancel', 'btn.select': 'Select',
+    'progress.title': 'Progress', 'progress.images': '{p} / {t} images',
+    'logs.title': 'Logs', 'logs.placeholder': 'Waiting for start…',
+    'search.ph': 'Search by name or category…',
+    'col.id': '#', 'col.name': 'Name', 'col.resolution': 'Resolution',
+    'col.categories': 'Categories', 'col.colors': 'Colors', 'col.date': 'Processed',
+    'count': '{n} photos',
+    'empty': 'No processed photos.\nGo to the Run tab to start processing.',
+    'fm.title': 'Select Directory', 'fm.up': '.. (up one level)',
+    'fm.empty': 'No subfolders', 'fm.error': 'Failed to load directory',
+    'err.start': 'Failed to start',
+    'cat.portrait': 'Portrait', 'cat.nature': 'Nature', 'cat.animal': 'Animal',
+    'cat.food': 'Food', 'cat.vehicle': 'Vehicle', 'cat.architecture': 'Architecture',
+    'cat.city': 'City', 'cat.indoor': 'Indoor', 'cat.sport': 'Sport',
+    'cat.document': 'Document', 'cat.other': 'Other',
+  },
+  ru: {
+    'status.idle': 'Готов', 'status.running': 'Обработка…',
+    'tab.run': 'Запуск', 'tab.photos': 'Фотографии',
+    'config.title': 'Конфигурация', 'config.dir': 'Директория фото',
+    'config.provider': 'Провайдер', 'config.colors': 'Цветов',
+    'params.title': 'Параметры запуска', 'params.dir': 'Директория для сканирования',
+    'params.colors': 'Цветов', 'params.skip': 'Пропустить обработанные',
+    'btn.browse': 'Обзор', 'btn.run': 'Запустить', 'btn.refresh': 'Обновить',
+    'btn.cancel': 'Отмена', 'btn.select': 'Выбрать',
+    'progress.title': 'Прогресс', 'progress.images': '{p} / {t} изображений',
+    'logs.title': 'Логи', 'logs.placeholder': 'Ожидание запуска…',
+    'search.ph': 'Поиск по названию или категории…',
+    'col.id': '#', 'col.name': 'Название', 'col.resolution': 'Разрешение',
+    'col.categories': 'Категории', 'col.colors': 'Цвета', 'col.date': 'Обработано',
+    'count': '{n} фото',
+    'empty': 'Нет обработанных фото.\nПерейдите на вкладку «Запуск» и запустите обработку.',
+    'fm.title': 'Выбор директории', 'fm.up': '.. (на уровень выше)',
+    'fm.empty': 'Вложенных папок нет', 'fm.error': 'Ошибка загрузки директории',
+    'err.start': 'Ошибка запуска',
+    'cat.portrait': 'Портрет', 'cat.nature': 'Природа', 'cat.animal': 'Животное',
+    'cat.food': 'Еда', 'cat.vehicle': 'Транспорт', 'cat.architecture': 'Архитектура',
+    'cat.city': 'Город', 'cat.indoor': 'Интерьер', 'cat.sport': 'Спорт',
+    'cat.document': 'Документ', 'cat.other': 'Другое',
+  }
+};
+
+let lang = localStorage.getItem('pme_lang') || 'ru';
+
+function t(key, vars) {
+  let s = (T[lang] || T.ru)[key] || key;
+  if (vars) Object.entries(vars).forEach(([k, v]) => { s = s.replace('{' + k + '}', v); });
+  return s;
+}
+
+function applyLang() {
+  document.documentElement.lang = lang;
+  document.getElementById('lang-btn').textContent = lang === 'ru' ? 'EN' : 'RU';
+  document.querySelectorAll('[data-i18n]').forEach(el => {
+    el.textContent = t(el.dataset.i18n);
+  });
+  document.getElementById('search-inp').placeholder = t('search.ph');
+  // Re-render dynamic text that uses t()
+  const statusRunning = document.getElementById('status-badge').classList.contains('status-running');
+  document.getElementById('status-text').textContent = t(statusRunning ? 'status.running' : 'status.idle');
+  const p = parseInt(document.getElementById('progress-meta').dataset.p || 0);
+  const total = parseInt(document.getElementById('progress-meta').dataset.t || 0);
+  document.getElementById('progress-meta').textContent = t('progress.images', {p, t: total});
+  document.getElementById('empty-text').textContent = t('empty');
+  if (allPhotos.length) filterPhotos(); // re-render table with translated categories
+}
+
+function toggleLang() {
+  lang = lang === 'ru' ? 'en' : 'ru';
+  localStorage.setItem('pme_lang', lang);
+  applyLang();
+}
+
+function tCat(cat) { return t('cat.' + cat) || cat; }
+
+// ── Tabs ──────────────────────────────────────────────────────────────────────
 let allPhotos = [];
 let pollTimer = null;
 let lastLogLen = 0;
 
-// ── Tabs ──────────────────────────────────────────────────────────────────────
 function switchTab(name, btn) {
   document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
   document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
   document.getElementById('tab-' + name).classList.add('active');
   btn.classList.add('active');
+  history.replaceState(null, '', '#' + name);
   if (name === 'photos') loadPhotos();
+}
+
+// Restore tab from URL hash (e.g. after navigating back from photo detail)
+function restoreTab() {
+  const hash = location.hash.slice(1);
+  if (hash === 'photos') {
+    const btn = document.getElementById('tab-btn-photos');
+    btn.click();
+  }
 }
 
 // ── Config ────────────────────────────────────────────────────────────────────
@@ -627,16 +609,12 @@ async function startRun() {
   });
   if (!res.ok) {
     const err = await res.json();
-    alert(err.error || 'Ошибка запуска');
+    alert(err.error || t('err.start'));
     return;
   }
   document.getElementById('log-term').innerHTML = '';
   document.getElementById('progress-card').style.display = 'block';
   lastLogLen = 0;
-  startPolling();
-}
-
-function startPolling() {
   if (pollTimer) clearInterval(pollTimer);
   pollTimer = setInterval(pollStatus, 700);
 }
@@ -646,7 +624,6 @@ async function pollStatus() {
   try { s = await fetch('/api/status').then(r => r.json()); }
   catch { return; }
 
-  // Status badge
   const badge = document.getElementById('status-badge');
   const dot   = document.getElementById('status-dot');
   const txt   = document.getElementById('status-text');
@@ -655,24 +632,25 @@ async function pollStatus() {
   if (s.running) {
     badge.className = 'status-badge status-running';
     dot.className   = 'status-dot pulse';
-    txt.textContent = 'Обработка…';
+    txt.textContent = t('status.running');
     btn.disabled    = true;
   } else {
     badge.className = 'status-badge status-idle';
     dot.className   = 'status-dot';
-    txt.textContent = 'Готов';
+    txt.textContent = t('status.idle');
     btn.disabled    = false;
     if (pollTimer) { clearInterval(pollTimer); pollTimer = null; }
   }
 
-  // Progress
   const total = s.total || 0;
   const prog  = s.progress || 0;
   const pct   = total > 0 ? (prog / total * 100) : 0;
-  document.getElementById('progress-bar').style.width  = pct + '%';
-  document.getElementById('progress-meta').textContent = `${prog} / ${total} изображений`;
+  document.getElementById('progress-bar').style.width = pct + '%';
+  const meta = document.getElementById('progress-meta');
+  meta.dataset.p = prog;
+  meta.dataset.t = total;
+  meta.textContent = t('progress.images', {p: prog, t: total});
 
-  // Logs
   const logEl   = document.getElementById('log-term');
   const newLogs = s.logs.slice(lastLogLen);
   lastLogLen    = s.logs.length;
@@ -696,7 +674,9 @@ function esc(s) {
 // ── Photos ────────────────────────────────────────────────────────────────────
 async function loadPhotos() {
   try {
-    allPhotos = await fetch('/api/photos').then(r => r.json());
+    const dir = document.getElementById('inp-dir').value;
+    const url = dir ? '/api/photos?dir=' + encodeURIComponent(dir) : '/api/photos';
+    allPhotos = await fetch(url).then(r => r.json());
     filterPhotos();
   } catch {}
 }
@@ -706,7 +686,7 @@ function filterPhotos() {
   const filtered = q
     ? allPhotos.filter(p =>
         p.file_name.toLowerCase().includes(q) ||
-        p.categories.some(c => c.toLowerCase().includes(q)))
+        p.categories.some(c => c.toLowerCase().includes(q) || tCat(c).toLowerCase().includes(q)))
     : allPhotos;
   renderPhotos(filtered);
 }
@@ -717,24 +697,25 @@ function renderPhotos(photos) {
   const count = document.getElementById('photos-count');
   const wrap  = document.getElementById('photos-table-wrap');
 
-  count.textContent = `${photos.length} фото`;
+  count.textContent = t('count', {n: photos.length});
 
   if (photos.length === 0) {
     wrap.style.display  = 'none';
     empty.style.display = 'block';
+    document.getElementById('empty-text').textContent = t('empty');
     return;
   }
   wrap.style.display  = 'block';
   empty.style.display = 'none';
 
   tbody.innerHTML = photos.map(p => {
-    const cats   = p.categories.slice(0, 3).map(c => `<span class="tag">${esc(c)}</span>`).join('');
+    const cats   = p.categories.slice(0, 3).map(c => `<span class="tag">${esc(tCat(c))}</span>`).join('');
     const colors = p.colors.slice(0, 6).map(c =>
       `<span class="color-dot" style="background:${esc(c.hex)}" title="${esc(c.name)} ${c.percentage}%"></span>`
     ).join('');
     const date = p.last_processing_date ? p.last_processing_date.slice(0, 10) : '—';
     const dim  = (p.width && p.height) ? `${p.width}×${p.height}` : '—';
-    return `<tr onclick="window.open('/photo/${p.id}','_blank')">
+    return `<tr onclick="openPhoto(${p.id})">
       <td class="cell-id">${p.id}</td>
       <td class="cell-name" title="${esc(p.file_name)}">${esc(p.file_name)}</td>
       <td class="cell-dim">${dim}</td>
@@ -745,108 +726,85 @@ function renderPhotos(photos) {
   }).join('');
 }
 
+function openPhoto(id) {
+  window.location.href = '/photo/' + id;
+}
+
 // ── File Manager ──────────────────────────────────────────────────────────────
-// /host inside container = /home on host
-const HOST_MOUNT = '/host';
-const HOST_DISPLAY = '/home';
+const BROWSE_BASE = '/data';
 
-let fmCurrentPath = HOST_MOUNT;
-
-// Convert displayed host path (/home/...) ↔ container path (/host/...)
-function toContainer(p) { return p.startsWith(HOST_DISPLAY + '/') ? HOST_MOUNT + p.slice(HOST_DISPLAY.length) : (p === HOST_DISPLAY ? HOST_MOUNT : p); }
-function toDisplay(p)   { return p.startsWith(HOST_MOUNT + '/')  ? HOST_DISPLAY + p.slice(HOST_MOUNT.length)  : (p === HOST_MOUNT  ? HOST_DISPLAY  : p); }
+let fmCurrentPath = BROWSE_BASE;
 
 function openFileMgr() {
-  const current = document.getElementById('inp-dir').value || HOST_DISPLAY;
-  fmCurrentPath = toContainer(current);
+  fmCurrentPath = document.getElementById('inp-dir').value || BROWSE_BASE;
   document.getElementById('fm-overlay').classList.add('open');
   fmNavigate(fmCurrentPath);
 }
-
-function closeFileMgr() {
-  document.getElementById('fm-overlay').classList.remove('open');
-}
-
-function fmOverlayClick(e) {
-  if (e.target === document.getElementById('fm-overlay')) closeFileMgr();
-}
-
+function closeFileMgr() { document.getElementById('fm-overlay').classList.remove('open'); }
+function fmOverlayClick(e) { if (e.target === document.getElementById('fm-overlay')) closeFileMgr(); }
 function confirmDir() {
-  // Store container-internal path (used for actual scanning inside Docker)
   document.getElementById('inp-dir').value = fmCurrentPath;
   closeFileMgr();
+  if (document.getElementById('tab-photos').classList.contains('active')) loadPhotos();
 }
 
 async function fmNavigate(path) {
   fmCurrentPath = path;
-  document.getElementById('fm-selected-path').textContent = toDisplay(path);
+  document.getElementById('fm-selected-path').textContent = path;
 
   let data;
   try {
     const res = await fetch('/api/browse?path=' + encodeURIComponent(path));
     data = await res.json();
   } catch {
-    document.getElementById('fm-body').innerHTML = '<div class="dir-empty">Ошибка загрузки директории</div>';
+    document.getElementById('fm-body').innerHTML = `<div class="dir-empty">${t('fm.error')}</div>`;
     return;
   }
 
-  // Breadcrumb
-  renderBreadcrumb(data.path, data.parent);
+  renderBreadcrumb(data.path);
 
-  // Directory list
-  const body = document.getElementById('fm-body');
   let html = '';
-
   if (data.parent) {
     html += `<div class="dir-item dir-up" onclick="fmNavigate('${esc(data.parent)}')">
-      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-        <polyline points="15 18 9 12 15 6"/>
-      </svg>
-      <span>.. (на уровень выше)</span>
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 18 9 12 15 6"/></svg>
+      <span>${t('fm.up')}</span>
     </div>`;
   }
-
-  if (data.dirs.length === 0) {
-    html += '<div class="dir-empty">Вложенных папок нет</div>';
-  } else {
-    html += data.dirs.map(d => `
+  html += data.dirs.length === 0
+    ? `<div class="dir-empty">${t('fm.empty')}</div>`
+    : data.dirs.map(d => `
       <div class="dir-item" onclick="fmNavigate('${esc(d.path)}')">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
           <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/>
         </svg>
         <span>${esc(d.name)}</span>
       </div>`).join('');
-  }
 
-  body.innerHTML = html;
+  document.getElementById('fm-body').innerHTML = html;
 }
 
-function renderBreadcrumb(containerPath) {
-  // Strip /host prefix, show as /home/...
-  const displayPath = toDisplay(containerPath);
-  const parts = displayPath.split('/').filter(Boolean); // e.g. ['home','artur','Pictures']
+function renderBreadcrumb(path) {
+  const parts = path.split('/').filter(Boolean);
   const el = document.getElementById('fm-breadcrumb');
 
   let html = '';
-  let cumDisplay = '';
+  let cum = '';
   parts.forEach((part, i) => {
-    cumDisplay += '/' + part;
+    cum += '/' + part;
     const isCurrent = i === parts.length - 1;
-    const containerP = toContainer(cumDisplay);
     html += `<span class="breadcrumb-sep">/</span>`;
-    if (isCurrent) {
-      html += `<span class="breadcrumb-part current">${esc(part)}</span>`;
-    } else {
-      html += `<span class="breadcrumb-part" onclick="fmNavigate('${esc(containerP)}')">${esc(part)}</span>`;
-    }
+    html += isCurrent
+      ? `<span class="breadcrumb-part current">${esc(part)}</span>`
+      : `<span class="breadcrumb-part" onclick="fmNavigate('${esc(cum)}')">${esc(part)}</span>`;
   });
-
-  el.innerHTML = html || `<span class="breadcrumb-part current">/home</span>`;
+  el.innerHTML = html || `<span class="breadcrumb-part current">/</span>`;
 }
 
 // ── Init ──────────────────────────────────────────────────────────────────────
+applyLang();
 loadConfig();
 pollStatus();
+restoreTab();
 </script>
 </body>
 </html>
