@@ -51,13 +51,17 @@ When you see `Application startup complete`, open your browser and go to:
 
 ---
 
+## Examples
+
+See [examples.md](examples-en.md) for a visual walkthrough of the app with annotated screenshots.
+
+---
+
 ## Using the web interface
 
 ### Tab: Run
 
 This is where you start processing your photos.
-
-![Run tab overview](run-tab.png)
 
 **Configuration** (top section) — shows the current settings read from your environment.
 

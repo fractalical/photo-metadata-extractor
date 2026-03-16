@@ -100,6 +100,10 @@ All parameters use the `PME_` prefix and can be set in `.env`:
 
 See [`docs/`](docs/) for platform-specific setup guides.
 
+**User guides:**
+- [English guide](docs/guide-en.md) — full usage instructions with examples
+- [Руководство на русском](docs/guide-ru.md) — полная инструкция с примерами
+
 ## NPU Profiles (CLI, advanced)
 
 ```bash
