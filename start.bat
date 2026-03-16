@@ -21,6 +21,9 @@ for /f "usebackq tokens=1,* delims==" %%A in (".env") do (
     if "%%A"=="PORT" set PORT=%%B
 )
 
+:: Auto-detect BROWSE_ROOT from user profile parent (e.g. C:\Users)
+for %%I in ("%USERPROFILE%\..") do set BROWSE_ROOT=%%~fI
+
 echo   UI: http://localhost:%PORT%
 echo.
 echo Starting... (first run may take 2-5 minutes to build)

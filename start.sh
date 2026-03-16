@@ -22,26 +22,27 @@ fi
 
 # ── Load .env if present ──────────────────────────────────────────────────────
 if [ -f .env ]; then
-    # Export only non-comment, non-empty lines
     set -a
     # shellcheck disable=SC1091
     source .env
     set +a
 fi
 
-# ── Derive BROWSE_ROOT from PHOTOS_DIR if not set ────────────────────────────
+# ── Auto-detect BROWSE_ROOT based on OS ──────────────────────────────────────
 if [ -z "${BROWSE_ROOT:-}" ]; then
-    BROWSE_ROOT="$(dirname "${PHOTOS_DIR:-$HOME/Pictures}")"
+    case "$(uname -s)" in
+        Darwin) BROWSE_ROOT="/Users" ;;
+        *)      BROWSE_ROOT="/home"  ;;
+    esac
 fi
+export BROWSE_ROOT
 
 PORT="${PORT:-8080}"
 
-echo "  Photos:  ${PHOTOS_DIR:-./photos}"
-echo "  UI:      http://localhost:${PORT}"
+echo "  UI:  http://localhost:${PORT}"
 echo ""
 echo "Starting... (first run may take 2–5 minutes to build)"
 echo "Press Ctrl+C to stop."
 echo ""
 
-export BROWSE_ROOT
 docker compose up --build --remove-orphans

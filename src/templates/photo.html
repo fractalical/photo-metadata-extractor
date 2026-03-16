@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="ru">
+<html lang="en">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -59,6 +59,21 @@ body {
 }
 .back-btn:hover { background: color-mix(in srgb, var(--accent) 8%, transparent); }
 .header-title { font-size: 15px; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.header-right { margin-left: auto; }
+
+.lang-btn {
+  background: none;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 4px 10px;
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--text-muted);
+  cursor: pointer;
+  letter-spacing: .06em;
+  transition: border-color .15s, color .15s;
+}
+.lang-btn:hover { border-color: var(--accent); color: var(--accent); }
 
 /* ── Main layout ── */
 .main {
@@ -178,9 +193,12 @@ body {
     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
       <polyline points="15 18 9 12 15 6"/>
     </svg>
-    Назад
+    <span data-i18n="btn.back"></span>
   </a>
   <span class="header-title">{{ photo.file_name }}</span>
+  <div class="header-right">
+    <button class="lang-btn" id="lang-btn" onclick="toggleLang()">RU</button>
+  </div>
 </div>
 
 <div class="main">
@@ -190,7 +208,7 @@ body {
     <img
       class="photo-img"
       id="photo-img"
-      src="/api/image?path={{ photo.absolute_path | urlencode }}"
+      src="/api/image/{{ photo.id }}"
       alt="{{ photo.file_name }}"
       onerror="showImgError()"
     >
@@ -201,36 +219,36 @@ body {
 
     <!-- File info -->
     <div class="card">
-      <div class="card-title">Информация о файле</div>
+      <div class="card-title" data-i18n="photo.info.title"></div>
       <div class="info-rows">
         <div class="info-row">
-          <span class="lbl">Название</span>
+          <span class="lbl" data-i18n="photo.lbl.name"></span>
           <span class="val" style="font-family:inherit;font-size:14px">{{ photo.file_name }}</span>
         </div>
         <div class="info-row">
-          <span class="lbl">Разрешение</span>
+          <span class="lbl" data-i18n="photo.lbl.resolution"></span>
           <span class="val">
             {% if photo.width and photo.height %}{{ photo.width }} × {{ photo.height }} px{% else %}—{% endif %}
           </span>
         </div>
         <div class="info-row">
-          <span class="lbl">Формат</span>
+          <span class="lbl" data-i18n="photo.lbl.format"></span>
           <span class="val">{{ photo.file_extension | upper }}</span>
         </div>
         <div class="info-row">
-          <span class="lbl">Путь</span>
+          <span class="lbl" data-i18n="photo.lbl.path"></span>
           <span class="val" style="font-size:11px">{{ photo.absolute_path }}</span>
         </div>
         <div class="info-row">
-          <span class="lbl">Создан</span>
+          <span class="lbl" data-i18n="photo.lbl.created"></span>
           <span class="val">{{ photo.created_at[:10] if photo.created_at else '—' }}</span>
         </div>
         <div class="info-row">
-          <span class="lbl">Изменён</span>
+          <span class="lbl" data-i18n="photo.lbl.modified"></span>
           <span class="val">{{ photo.updated_at[:10] if photo.updated_at else '—' }}</span>
         </div>
         <div class="info-row">
-          <span class="lbl">Обработан</span>
+          <span class="lbl" data-i18n="photo.lbl.processed"></span>
           <span class="val">{{ photo.last_processing_date[:16].replace('T',' ') if photo.last_processing_date else '—' }}</span>
         </div>
       </div>
@@ -239,13 +257,13 @@ body {
     <!-- Categories -->
     {% if photo.categories %}
     <div class="card">
-      <div class="card-title">Категории контента</div>
+      <div class="card-title" data-i18n="photo.cats.title"></div>
       <div class="cat-list">
         {% for cat in photo.categories %}
         {% set score = photo.scores.get(cat, 0) %}
         <div class="cat-item">
           <div class="cat-header">
-            <span class="cat-name">{{ cat }}</span>
+            <span class="cat-name" data-cat="{{ cat }}">{{ cat }}</span>
             <span class="cat-score">{{ "%.0f" | format(score * 100) }}%</span>
           </div>
           <div class="bar-bg">
@@ -260,7 +278,7 @@ body {
     <!-- Colors -->
     {% if photo.colors %}
     <div class="card">
-      <div class="card-title">Доминирующие цвета</div>
+      <div class="card-title" data-i18n="photo.colors.title"></div>
       <div class="color-list">
         {% for color in photo.colors %}
         <div class="color-row">
@@ -280,10 +298,75 @@ body {
 </div>
 
 <script>
+// ── i18n ──────────────────────────────────────────────────────────────────────
+const T = {
+  en: {
+    'btn.back': 'Back',
+    'photo.info.title': 'File Information',
+    'photo.lbl.name': 'Name',
+    'photo.lbl.resolution': 'Resolution',
+    'photo.lbl.format': 'Format',
+    'photo.lbl.path': 'Path',
+    'photo.lbl.created': 'Created',
+    'photo.lbl.modified': 'Modified',
+    'photo.lbl.processed': 'Processed',
+    'photo.cats.title': 'Content Categories',
+    'photo.colors.title': 'Dominant Colors',
+    'photo.img.error': 'Failed to load image',
+    'cat.portrait': 'Portrait', 'cat.nature': 'Nature', 'cat.animal': 'Animal',
+    'cat.food': 'Food', 'cat.vehicle': 'Vehicle', 'cat.architecture': 'Architecture',
+    'cat.city': 'City', 'cat.indoor': 'Indoor', 'cat.sport': 'Sport',
+    'cat.document': 'Document', 'cat.other': 'Other',
+  },
+  ru: {
+    'btn.back': 'Назад',
+    'photo.info.title': 'Информация о файле',
+    'photo.lbl.name': 'Название',
+    'photo.lbl.resolution': 'Разрешение',
+    'photo.lbl.format': 'Формат',
+    'photo.lbl.path': 'Путь',
+    'photo.lbl.created': 'Создан',
+    'photo.lbl.modified': 'Изменён',
+    'photo.lbl.processed': 'Обработан',
+    'photo.cats.title': 'Категории контента',
+    'photo.colors.title': 'Доминирующие цвета',
+    'photo.img.error': 'Не удалось загрузить изображение',
+    'cat.portrait': 'Портрет', 'cat.nature': 'Природа', 'cat.animal': 'Животное',
+    'cat.food': 'Еда', 'cat.vehicle': 'Транспорт', 'cat.architecture': 'Архитектура',
+    'cat.city': 'Город', 'cat.indoor': 'Интерьер', 'cat.sport': 'Спорт',
+    'cat.document': 'Документ', 'cat.other': 'Другое',
+  }
+};
+
+let lang = localStorage.getItem('pme_lang') || 'ru';
+
+function t(key) {
+  return (T[lang] || T.ru)[key] || key;
+}
+
+function applyLang() {
+  document.documentElement.lang = lang;
+  document.getElementById('lang-btn').textContent = lang === 'ru' ? 'EN' : 'RU';
+  document.querySelectorAll('[data-i18n]').forEach(el => {
+    el.textContent = t(el.dataset.i18n);
+  });
+  document.querySelectorAll('[data-cat]').forEach(el => {
+    el.textContent = t('cat.' + el.dataset.cat);
+  });
+}
+
+function toggleLang() {
+  lang = lang === 'ru' ? 'en' : 'ru';
+  localStorage.setItem('pme_lang', lang);
+  applyLang();
+}
+
 function showImgError() {
   document.getElementById('img-panel').innerHTML =
-    '<div class="img-error">Не удалось загрузить изображение</div>';
+    '<div class="img-error">' + t('photo.img.error') + '</div>';
 }
+
+applyLang();
 </script>
 </body>
 </html>

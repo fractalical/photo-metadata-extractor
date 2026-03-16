@@ -19,6 +19,9 @@ if (Test-Path ".env") {
     }
 }
 
+# Auto-detect BROWSE_ROOT from user profile parent (e.g. C:\Users)
+$env:BROWSE_ROOT = Split-Path -Parent $env:USERPROFILE
+
 Write-Host "  UI: http://localhost:$port" -ForegroundColor Green
 Write-Host ""
 Write-Host "Starting... (first run may take 2-5 minutes to build)"
