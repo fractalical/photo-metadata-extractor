@@ -5,6 +5,7 @@ import json
 import os
 import threading
 import time
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from pathlib import Path
 
 import urllib.parse
@@ -113,31 +114,44 @@ def _run_extraction(root_dir: str, skip_existing: bool, num_colors: int) -> None
         next_id = max((r.id for r in existing.values()), default=0) + 1
         all_records = dict(existing)
         processed = 0
+        _proc_lock = threading.Lock()
 
-        for scan in to_process:
-            metadata = pipeline.process_image(scan)
-            abs_path = str(scan.path)
+        with ThreadPoolExecutor(max_workers=config.max_workers) as executor:
+            futures = {executor.submit(pipeline.process_image, scan): scan for scan in to_process}
 
-            if metadata is not None:
-                record_id = existing[abs_path].id if abs_path in existing else next_id
-                if abs_path not in existing:
-                    next_id += 1
-                all_records[abs_path] = build_record(
-                    record_id=record_id,
-                    file_name=scan.file_name,
-                    absolute_path=abs_path,
-                    file_extension=scan.extension,
-                    created_at=scan.created_at,
-                    updated_at=scan.updated_at,
-                    metadata=metadata,
-                )
-                processed += 1
+            for future in as_completed(futures):
+                scan = futures[future]
+                try:
+                    metadata = future.result()
+                except Exception as exc:
+                    logger.warning("Unexpected error processing {}: {}", scan.file_name, exc)
+                    metadata = None
 
-            with _lock:
-                _state["progress"] += 1
+                abs_path = str(scan.path)
 
-            if processed % config.batch_size == 0 and processed > 0:
-                save_records(csv_path, list(all_records.values()))
+                if metadata is not None:
+                    with _proc_lock:
+                        record_id = existing[abs_path].id if abs_path in existing else next_id
+                        if abs_path not in existing:
+                            next_id += 1
+                        all_records[abs_path] = build_record(
+                            record_id=record_id,
+                            file_name=scan.file_name,
+                            absolute_path=abs_path,
+                            file_extension=scan.extension,
+                            created_at=scan.created_at,
+                            updated_at=scan.updated_at,
+                            metadata=metadata,
+                        )
+                        processed += 1
+                        should_save = processed % config.batch_size == 0
+                        snapshot = list(all_records.values()) if should_save else None
+
+                    if should_save:
+                        save_records(csv_path, snapshot)
+
+                with _lock:
+                    _state["progress"] += 1
 
         save_records(csv_path, list(all_records.values()))
         Path("/data/.pme_last_scan").write_text(str(csv_path), encoding="utf-8")
