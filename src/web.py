@@ -200,7 +200,7 @@ async def photo_page(request: Request, photo_id: int, dir: str | None = Query(de
     photo = next((p for p in photos if p["id"] == photo_id), None)
     if photo is None:
         raise HTTPException(404, "Фото не найдено")
-    return templates.TemplateResponse("photo.html", {"request": request, "photo": photo})
+    return templates.TemplateResponse("photo.html", {"request": request, "photo": photo, "dir": dir or ""})
 
 
 # ── API ───────────────────────────────────────────────────────────────────────
@@ -221,8 +221,8 @@ async def get_photo(photo_id: int):
 
 
 @app.get("/api/image/{photo_id}")
-async def serve_image(photo_id: int):
-    photos = _read_csv()
+async def serve_image(photo_id: int, dir: str | None = Query(default=None)):
+    photos = _read_csv(dir)
     photo = next((p for p in photos if p["id"] == photo_id), None)
     if photo is None:
         raise HTTPException(404, "Фото не найдено")

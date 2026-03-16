@@ -849,6 +849,7 @@ function closeFileMgr() { document.getElementById('fm-overlay').classList.remove
 function fmOverlayClick(e) { if (e.target === document.getElementById('fm-overlay')) closeFileMgr(); }
 function confirmDir() {
   document.getElementById('inp-dir').value = fmCurrentPath;
+  localStorage.setItem('pme_dir', fmCurrentPath);
   closeFileMgr();
   if (document.getElementById('tab-photos').classList.contains('active')) loadPhotos();
 }

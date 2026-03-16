@@ -208,7 +208,7 @@ body {
     <img
       class="photo-img"
       id="photo-img"
-      src="/api/image/{{ photo.id }}"
+      src="/api/image/{{ photo.id }}{% if dir %}?dir={{ dir | urlencode }}{% endif %}"
       alt="{{ photo.file_name }}"
       onerror="showImgError()"
     >
