@@ -133,8 +133,14 @@ def main() -> None:
         logger.info("Nothing new to process. CSV is up to date.")
         sys.exit(0)
 
-    # 3. Initialize pipeline (loads models)
-    pipeline = ProcessingPipeline(config)
+    # 3. Process images — each worker thread gets its own pipeline/session
+    thread_local = threading.local()
+
+    def _init_worker():
+        thread_local.pipeline = ProcessingPipeline(config)
+
+    def _process(scan):
+        return thread_local.pipeline.process_image(scan)
 
     # 4. Process images in batches with progress
     next_id = max((r.id for r in existing.values()), default=0) + 1
@@ -147,8 +153,9 @@ def main() -> None:
 
     lock = threading.Lock()
 
-    with ThreadPoolExecutor(max_workers=config.max_workers) as executor:
-        futures = {executor.submit(pipeline.process_image, scan): scan for scan in to_process}
+    with ThreadPoolExecutor(max_workers=config.max_workers,
+                            initializer=_init_worker) as executor:
+        futures = {executor.submit(_process, scan): scan for scan in to_process}
 
         for future in tqdm(as_completed(futures), total=len(to_process), desc="Processing", unit="img"):
             scan = futures[future]

@@ -11,7 +11,7 @@ from pathlib import Path
 import urllib.parse
 
 import uvicorn
-from fastapi import FastAPI, HTTPException, Request
+from fastapi import FastAPI, HTTPException, Query, Request
 from fastapi.responses import FileResponse, HTMLResponse, JSONResponse
 from fastapi.templating import Jinja2Templates
 from loguru import logger
@@ -111,14 +111,22 @@ def _run_extraction(root_dir: str, skip_existing: bool, num_colors: int, max_wor
             logger.bind(log_key="log.nothing_to_do").info("Nothing to process. CSV is up to date.")
             return
 
-        pipeline = ProcessingPipeline(config)
+        thread_local = threading.local()
+
+        def _init_worker():
+            thread_local.pipeline = ProcessingPipeline(config)
+
+        def _process(scan):
+            return thread_local.pipeline.process_image(scan)
+
         next_id = max((r.id for r in existing.values()), default=0) + 1
         all_records = dict(existing)
         processed = 0
         _proc_lock = threading.Lock()
 
-        with ThreadPoolExecutor(max_workers=config.max_workers) as executor:
-            futures = {executor.submit(pipeline.process_image, scan): scan for scan in to_process}
+        with ThreadPoolExecutor(max_workers=config.max_workers,
+                                initializer=_init_worker) as executor:
+            futures = {executor.submit(_process, scan): scan for scan in to_process}
 
             for future in as_completed(futures):
                 scan = futures[future]
@@ -187,8 +195,8 @@ async def index(request: Request):
 
 
 @app.get("/photo/{photo_id}", response_class=HTMLResponse)
-async def photo_page(request: Request, photo_id: int):
-    photos = _read_csv()
+async def photo_page(request: Request, photo_id: int, dir: str | None = Query(default=None)):
+    photos = _read_csv(dir)
     photo = next((p for p in photos if p["id"] == photo_id), None)
     if photo is None:
         raise HTTPException(404, "Фото не найдено")
