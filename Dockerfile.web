@@ -1,0 +1,54 @@
+# ==============================================================================
+# Photo Metadata Extractor — Web UI (CPU mode)
+# ==============================================================================
+
+# --- Stage 1: Builder --------------------------------------------------------
+FROM python:3.12-slim AS builder
+
+WORKDIR /build
+
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends build-essential && \
+    rm -rf /var/lib/apt/lists/*
+
+RUN pip install --no-cache-dir --prefix=/install \
+    "numpy>=1.26.0,<2.0.0" \
+    "opencv-python-headless>=4.10.0" \
+    "scikit-learn>=1.5.0" \
+    "Pillow>=10.4.0" \
+    "pydantic>=2.9.0" \
+    "pydantic-settings>=2.5.0" \
+    "tqdm>=4.66.0" \
+    "loguru>=0.7.0" \
+    "webcolors>=24.8.0" \
+    "onnxruntime>=1.19.0" \
+    "fastapi>=0.115.0" \
+    "uvicorn[standard]>=0.30.0" \
+    "jinja2>=3.1.0" \
+    "aiofiles>=24.1.0"
+
+# --- Stage 2: Runtime --------------------------------------------------------
+FROM python:3.12-slim AS runtime
+
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends \
+        libgl1 \
+        libglib2.0-0 \
+        libgomp1 \
+    && rm -rf /var/lib/apt/lists/*
+
+COPY --from=builder /install /usr/local
+
+WORKDIR /app
+COPY src/ src/
+
+RUN mkdir -p /app/models
+
+ENV PME_ROOT_DIR=/data \
+    PME_MODEL_CACHE_DIR=/app/models \
+    PME_EXECUTION_PROVIDER=CPUExecutionProvider \
+    PME_NPU_DEVICE=CPU
+
+EXPOSE 8080
+
+CMD ["uvicorn", "src.web:app", "--host", "0.0.0.0", "--port", "8080"]

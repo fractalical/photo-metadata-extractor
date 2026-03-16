@@ -1,0 +1,289 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>{{ photo.file_name }} — Photo Metadata Extractor</title>
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --bg: #f5f5f7;
+  --bg-card: #ffffff;
+  --text: #1d1d1f;
+  --text-muted: #6e6e73;
+  --border: #d2d2d7;
+  --accent: #0071e3;
+  --success: #34c759;
+  --radius: 12px;
+  --radius-sm: 8px;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #111113;
+    --bg-card: #1c1c1e;
+    --text: #f5f5f7;
+    --text-muted: #98989f;
+    --border: #2c2c2e;
+    --accent: #2997ff;
+  }
+}
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  line-height: 1.5;
+  min-height: 100vh;
+}
+
+/* ── Header ── */
+.header {
+  background: var(--bg-card);
+  border-bottom: 1px solid var(--border);
+  padding: 14px 24px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.back-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 14px;
+  color: var(--accent);
+  text-decoration: none;
+  padding: 6px 10px;
+  border-radius: var(--radius-sm);
+  transition: background .15s;
+}
+.back-btn:hover { background: color-mix(in srgb, var(--accent) 8%, transparent); }
+.header-title { font-size: 15px; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+/* ── Main layout ── */
+.main {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 24px;
+  display: grid;
+  grid-template-columns: 1fr 380px;
+  gap: 20px;
+  align-items: start;
+}
+@media (max-width: 900px) {
+  .main { grid-template-columns: 1fr; }
+}
+
+/* ── Image panel ── */
+.image-panel {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 300px;
+  position: sticky;
+  top: 20px;
+}
+.photo-img {
+  width: 100%;
+  height: auto;
+  display: block;
+  max-height: 80vh;
+  object-fit: contain;
+}
+.img-error {
+  padding: 48px;
+  text-align: center;
+  color: var(--text-muted);
+  font-size: 14px;
+}
+
+/* ── Info panel ── */
+.info-panel { display: flex; flex-direction: column; gap: 16px; }
+
+.card {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 18px;
+}
+.card-title {
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: .06em;
+  color: var(--text-muted);
+  margin-bottom: 14px;
+}
+
+/* ── File info ── */
+.info-rows { display: flex; flex-direction: column; gap: 10px; }
+.info-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 12px;
+  font-size: 14px;
+}
+.info-row .lbl { color: var(--text-muted); flex-shrink: 0; }
+.info-row .val {
+  font-weight: 500;
+  text-align: right;
+  word-break: break-all;
+  font-family: ui-monospace, 'SF Mono', Menlo, monospace;
+  font-size: 13px;
+}
+
+/* ── Categories ── */
+.cat-list { display: flex; flex-direction: column; gap: 10px; }
+.cat-item { }
+.cat-header {
+  display: flex;
+  justify-content: space-between;
+  font-size: 13px;
+  margin-bottom: 4px;
+}
+.cat-name { font-weight: 500; }
+.cat-score { color: var(--text-muted); }
+.bar-bg { background: var(--border); border-radius: 100px; height: 4px; overflow: hidden; }
+.bar-fill { height: 100%; background: var(--accent); border-radius: 100px; }
+
+/* ── Colors ── */
+.color-list { display: flex; flex-direction: column; gap: 8px; }
+.color-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.color-swatch {
+  width: 32px;
+  height: 32px;
+  border-radius: 6px;
+  border: 1px solid rgba(128,128,128,.2);
+  flex-shrink: 0;
+}
+.color-info { flex: 1; min-width: 0; }
+.color-name { font-size: 13px; font-weight: 500; text-transform: capitalize; }
+.color-hex  { font-size: 12px; color: var(--text-muted); font-family: ui-monospace, monospace; }
+.color-pct  { font-size: 12px; color: var(--text-muted); margin-left: auto; flex-shrink: 0; }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <a class="back-btn" href="javascript:history.back()">
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+      <polyline points="15 18 9 12 15 6"/>
+    </svg>
+    Назад
+  </a>
+  <span class="header-title">{{ photo.file_name }}</span>
+</div>
+
+<div class="main">
+
+  <!-- ── Image ── -->
+  <div class="image-panel" id="img-panel">
+    <img
+      class="photo-img"
+      id="photo-img"
+      src="/api/image?path={{ photo.absolute_path | urlencode }}"
+      alt="{{ photo.file_name }}"
+      onerror="showImgError()"
+    >
+  </div>
+
+  <!-- ── Metadata ── -->
+  <div class="info-panel">
+
+    <!-- File info -->
+    <div class="card">
+      <div class="card-title">Информация о файле</div>
+      <div class="info-rows">
+        <div class="info-row">
+          <span class="lbl">Название</span>
+          <span class="val" style="font-family:inherit;font-size:14px">{{ photo.file_name }}</span>
+        </div>
+        <div class="info-row">
+          <span class="lbl">Разрешение</span>
+          <span class="val">
+            {% if photo.width and photo.height %}{{ photo.width }} × {{ photo.height }} px{% else %}—{% endif %}
+          </span>
+        </div>
+        <div class="info-row">
+          <span class="lbl">Формат</span>
+          <span class="val">{{ photo.file_extension | upper }}</span>
+        </div>
+        <div class="info-row">
+          <span class="lbl">Путь</span>
+          <span class="val" style="font-size:11px">{{ photo.absolute_path }}</span>
+        </div>
+        <div class="info-row">
+          <span class="lbl">Создан</span>
+          <span class="val">{{ photo.created_at[:10] if photo.created_at else '—' }}</span>
+        </div>
+        <div class="info-row">
+          <span class="lbl">Изменён</span>
+          <span class="val">{{ photo.updated_at[:10] if photo.updated_at else '—' }}</span>
+        </div>
+        <div class="info-row">
+          <span class="lbl">Обработан</span>
+          <span class="val">{{ photo.last_processing_date[:16].replace('T',' ') if photo.last_processing_date else '—' }}</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Categories -->
+    {% if photo.categories %}
+    <div class="card">
+      <div class="card-title">Категории контента</div>
+      <div class="cat-list">
+        {% for cat in photo.categories %}
+        {% set score = photo.scores.get(cat, 0) %}
+        <div class="cat-item">
+          <div class="cat-header">
+            <span class="cat-name">{{ cat }}</span>
+            <span class="cat-score">{{ "%.0f" | format(score * 100) }}%</span>
+          </div>
+          <div class="bar-bg">
+            <div class="bar-fill" style="width:{{ "%.1f" | format(score * 100) }}%"></div>
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+    {% endif %}
+
+    <!-- Colors -->
+    {% if photo.colors %}
+    <div class="card">
+      <div class="card-title">Доминирующие цвета</div>
+      <div class="color-list">
+        {% for color in photo.colors %}
+        <div class="color-row">
+          <div class="color-swatch" style="background:{{ color.hex }}"></div>
+          <div class="color-info">
+            <div class="color-name">{{ color.name }}</div>
+            <div class="color-hex">{{ color.hex }}</div>
+          </div>
+          <span class="color-pct">{{ color.percentage }}%</span>
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+    {% endif %}
+
+  </div>
+</div>
+
+<script>
+function showImgError() {
+  document.getElementById('img-panel').innerHTML =
+    '<div class="img-error">Не удалось загрузить изображение</div>';
+}
+</script>
+</body>
+</html>
