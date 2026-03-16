@@ -34,7 +34,7 @@ def scan_directory(config: AppConfig) -> list[ScanResult]:
     if not root.is_dir():
         raise FileNotFoundError(f"Root directory not found: {root}")
 
-    logger.info("Scanning directory: {}", root)
+    logger.bind(log_key="log.scanning", log_params={"path": str(root)}).info("Scanning directory: {}", root)
     extensions = {ext.lower() for ext in config.image_extensions}
 
     for dirpath, dirnames, filenames in os.walk(root, followlinks=False):
@@ -64,8 +64,8 @@ def scan_directory(config: AppConfig) -> list[ScanResult]:
                     )
                 )
             except OSError as e:
-                logger.warning("Cannot read file {}: {}", fpath, e)
+                logger.bind(log_key="log.file_error", log_params={"path": str(fpath), "e": str(e)}).warning("Cannot read file {}: {}", fpath, e)
 
     results.sort(key=lambda r: r.path)
-    logger.info("Found {} image files", len(results))
+    logger.bind(log_key="log.scan_found", log_params={"n": len(results)}).info("Found {} image files", len(results))
     return results

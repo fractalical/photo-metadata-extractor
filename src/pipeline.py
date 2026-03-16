@@ -43,14 +43,14 @@ class ProcessingPipeline:
     def __init__(self, config: AppConfig) -> None:
         self.config = config
 
-        logger.info("Initializing content classifier (NPU: {})...", config.npu_device)
+        logger.bind(log_key="log.init_classifier", log_params={"provider": config.npu_device}).info("Initializing content classifier (NPU: {})...", config.npu_device)
         self.classifier = ContentClassifier(
             cache_dir=config.model_cache_dir,
             execution_provider=config.execution_provider,
             npu_device=config.npu_device,
         )
 
-        logger.info("Initializing color extractor...")
+        logger.bind(log_key="log.init_colors").info("Initializing color extractor...")
         self.color_extractor = ColorExtractor(num_colors=config.num_colors)
 
         # Face detectors — OpenCV built-in Haar cascades, no extra deps
@@ -62,7 +62,7 @@ class ProcessingPipeline:
                 cv2.data.haarcascades + "haarcascade_profileface.xml"
             ),
         ]
-        logger.info("Face detector initialized.")
+        logger.bind(log_key="log.init_face").info("Face detector initialized.")
 
     def process_image(self, scan: ScanResult) -> ImageMetadata | None:
         """Process a single image file and return metadata.
@@ -71,7 +71,7 @@ class ProcessingPipeline:
         """
         image = cv2.imread(str(scan.path), cv2.IMREAD_COLOR)
         if image is None:
-            logger.warning("Failed to read image: {}", scan.path)
+            logger.bind(log_key="log.read_error", log_params={"path": str(scan.path)}).warning("Failed to read image: {}", scan.path)
             return None
 
         h, w = image.shape[:2]
@@ -89,7 +89,7 @@ class ProcessingPipeline:
                 for cat in categories
             }
         except Exception as e:
-            logger.error("Classification failed for {}: {}", scan.path, e)
+            logger.bind(log_key="log.classify_error", log_params={"path": str(scan.path), "e": str(e)}).error("Classification failed for {}: {}", scan.path, e)
             categories = [ContentCategory.OTHER]
             scores = {"other": 1.0}
 
@@ -114,13 +114,13 @@ class ProcessingPipeline:
                 categories.sort(key=lambda c: -scores.get(c.value, 0))
 
         except Exception as e:
-            logger.warning("Face detection failed for {}: {}", scan.path, e)
+            logger.bind(log_key="log.face_error", log_params={"path": str(scan.path), "e": str(e)}).warning("Face detection failed for {}: {}", scan.path, e)
 
         # Dominant colors (CPU, fast)
         try:
             colors = self.color_extractor.extract(image)
         except Exception as e:
-            logger.error("Color extraction failed for {}: {}", scan.path, e)
+            logger.bind(log_key="log.color_error", log_params={"path": str(scan.path), "e": str(e)}).error("Color extraction failed for {}: {}", scan.path, e)
             colors = []
 
         return ImageMetadata(

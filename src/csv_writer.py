@@ -37,10 +37,10 @@ def load_existing_records(csv_path: Path) -> dict[str, PhotoRecord]:
                     )
                     records[record.absolute_path] = record
                 except (KeyError, ValueError) as e:
-                    logger.warning("Skipping malformed CSV row: {}", e)
-        logger.info("Loaded {} existing records from CSV", len(records))
+                    logger.bind(log_key="log.csv_row_error", log_params={"e": str(e)}).warning("Skipping malformed CSV row: {}", e)
+        logger.bind(log_key="log.csv_loaded", log_params={"n": len(records)}).info("Loaded {} existing records from CSV", len(records))
     except Exception as e:
-        logger.error("Failed to read CSV {}: {}", csv_path, e)
+        logger.bind(log_key="log.csv_read_error", log_params={"path": str(csv_path), "e": str(e)}).error("Failed to read CSV {}: {}", csv_path, e)
 
     return records
 
@@ -60,7 +60,7 @@ def save_records(csv_path: Path, records: list[PhotoRecord]) -> None:
                 row[key] = row[key].isoformat()
             writer.writerow(row)
 
-    logger.info("Saved {} records to {}", len(records), csv_path)
+    logger.bind(log_key="log.csv_saved", log_params={"n": len(records), "path": str(csv_path)}).info("Saved {} records to {}", len(records), csv_path)
 
 
 def build_record(

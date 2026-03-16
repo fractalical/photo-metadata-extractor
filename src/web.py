@@ -42,12 +42,17 @@ _state: dict = {
 
 def _log_sink(message) -> None:
     record = message.record
+    extra = record["extra"]
+    entry: dict = {
+        "time": record["time"].strftime("%H:%M:%S"),
+        "level": record["level"].name,
+        "text": record["message"],
+    }
+    if "log_key" in extra:
+        entry["key"] = extra["log_key"]
+        entry["params"] = extra.get("log_params", {})
     with _lock:
-        _state["logs"].append({
-            "time": record["time"].strftime("%H:%M:%S"),
-            "level": record["level"].name,
-            "text": record["message"],
-        })
+        _state["logs"].append(entry)
         if len(_state["logs"]) > 1000:
             _state["logs"] = _state["logs"][-1000:]
 
@@ -77,7 +82,7 @@ def _run_extraction(root_dir: str, skip_existing: bool, num_colors: int) -> None
 
         scans = scan_directory(config)
         if not scans:
-            logger.info("Изображения не найдены.")
+            logger.bind(log_key="log.no_images").info("No images found.")
             return
 
         existing = load_existing_records(csv_path) if skip_existing else {}
@@ -95,12 +100,13 @@ def _run_extraction(root_dir: str, skip_existing: bool, num_colors: int) -> None
         with _lock:
             _state["total"] = len(to_process)
 
-        logger.info(
-            f"Найдено {len(scans)} изображений, к обработке: {len(to_process)}"
-        )
+        logger.bind(
+            log_key="log.found",
+            log_params={"n": len(scans), "m": len(to_process)},
+        ).info("Found {} images, to process: {}", len(scans), len(to_process))
 
         if not to_process:
-            logger.info("Нечего обрабатывать. CSV актуален.")
+            logger.bind(log_key="log.nothing_to_do").info("Nothing to process. CSV is up to date.")
             return
 
         pipeline = ProcessingPipeline(config)
@@ -137,13 +143,18 @@ def _run_extraction(root_dir: str, skip_existing: bool, num_colors: int) -> None
         Path("/data/.pme_last_scan").write_text(str(csv_path), encoding="utf-8")
 
         elapsed = time.monotonic() - _state["start_time"]
-        logger.info(f"Готово! Обработано {processed} изображений за {elapsed:.1f}s")
+        logger.bind(
+            log_key="log.done",
+            log_params={"n": processed, "s": f"{elapsed:.1f}"},
+        ).info("Done! Processed {} images in {:.1f}s", processed, elapsed)
 
         with _lock:
             _state["stats"] = {"processed": processed, "elapsed": round(elapsed, 1)}
 
     except Exception as e:
-        logger.error(f"Ошибка экстракции: {e}")
+        logger.bind(log_key="log.extract_error", log_params={"e": str(e)}).error(
+            "Extraction error: {}", e
+        )
         with _lock:
             _state["error"] = str(e)
     finally:

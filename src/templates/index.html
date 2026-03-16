@@ -495,6 +495,25 @@ const T = {
     'fm.title': 'Select Directory', 'fm.up': '.. (up one level)',
     'fm.empty': 'No subfolders', 'fm.error': 'Failed to load directory',
     'err.start': 'Failed to start',
+    'log.scanning': 'Scanning directory: {path}',
+    'log.scan_found': 'Found {n} image files',
+    'log.file_error': 'Cannot read file {path}: {e}',
+    'log.no_images': 'No images found.',
+    'log.found': 'Found {n} images, to process: {m}',
+    'log.nothing_to_do': 'Nothing to process. CSV is up to date.',
+    'log.done': 'Done! Processed {n} images in {s}s',
+    'log.extract_error': 'Extraction error: {e}',
+    'log.init_classifier': 'Initializing content classifier (NPU: {provider})…',
+    'log.init_colors': 'Initializing color extractor…',
+    'log.init_face': 'Face detector initialized.',
+    'log.read_error': 'Failed to read image: {path}',
+    'log.classify_error': 'Classification failed for {path}: {e}',
+    'log.face_error': 'Face detection failed for {path}: {e}',
+    'log.color_error': 'Color extraction failed for {path}: {e}',
+    'log.csv_loaded': 'Loaded {n} existing records from CSV',
+    'log.csv_saved': 'Saved {n} records to {path}',
+    'log.csv_row_error': 'Skipping malformed CSV row: {e}',
+    'log.csv_read_error': 'Failed to read CSV {path}: {e}',
     'cat.portrait': 'Portrait', 'cat.nature': 'Nature', 'cat.animal': 'Animal',
     'cat.food': 'Food', 'cat.vehicle': 'Vehicle', 'cat.architecture': 'Architecture',
     'cat.city': 'City', 'cat.indoor': 'Indoor', 'cat.sport': 'Sport',
@@ -519,6 +538,25 @@ const T = {
     'fm.title': 'Выбор директории', 'fm.up': '.. (на уровень выше)',
     'fm.empty': 'Вложенных папок нет', 'fm.error': 'Ошибка загрузки директории',
     'err.start': 'Ошибка запуска',
+    'log.scanning': 'Сканирование директории: {path}',
+    'log.scan_found': 'Найдено {n} файлов изображений',
+    'log.file_error': 'Не удалось прочитать файл {path}: {e}',
+    'log.no_images': 'Изображения не найдены.',
+    'log.found': 'Найдено {n} изображений, к обработке: {m}',
+    'log.nothing_to_do': 'Нечего обрабатывать. CSV актуален.',
+    'log.done': 'Готово! Обработано {n} изображений за {s}s',
+    'log.extract_error': 'Ошибка экстракции: {e}',
+    'log.init_classifier': 'Инициализация классификатора (NPU: {provider})…',
+    'log.init_colors': 'Инициализация экстрактора цветов…',
+    'log.init_face': 'Детектор лиц инициализирован.',
+    'log.read_error': 'Не удалось прочитать изображение: {path}',
+    'log.classify_error': 'Ошибка классификации {path}: {e}',
+    'log.face_error': 'Ошибка детектора лиц для {path}: {e}',
+    'log.color_error': 'Ошибка извлечения цветов для {path}: {e}',
+    'log.csv_loaded': 'Загружено {n} записей из CSV',
+    'log.csv_saved': 'Сохранено {n} записей в {path}',
+    'log.csv_row_error': 'Пропуск некорректной строки CSV: {e}',
+    'log.csv_read_error': 'Ошибка чтения CSV {path}: {e}',
     'cat.portrait': 'Портрет', 'cat.nature': 'Природа', 'cat.animal': 'Животное',
     'cat.food': 'Еда', 'cat.vehicle': 'Транспорт', 'cat.architecture': 'Архитектура',
     'cat.city': 'Город', 'cat.indoor': 'Интерьер', 'cat.sport': 'Спорт',
@@ -659,9 +697,10 @@ async function pollStatus() {
   newLogs.forEach(log => {
     const div = document.createElement('div');
     div.className = 'log-line';
+    const text = log.key ? t(log.key, log.params || {}) : log.text;
     div.innerHTML = `<span class="log-time">${log.time}</span>`
       + `<span class="log-${log.level}">${log.level}</span>`
-      + `<span class="log-text">${esc(log.text)}</span>`;
+      + `<span class="log-text">${esc(text)}</span>`;
     logEl.appendChild(div);
   });
   if (newLogs.length) logEl.scrollTop = logEl.scrollHeight;
