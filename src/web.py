@@ -58,7 +58,7 @@ def _log_sink(message) -> None:
             _state["logs"] = _state["logs"][-1000:]
 
 
-def _run_extraction(root_dir: str, skip_existing: bool, num_colors: int) -> None:
+def _run_extraction(root_dir: str, skip_existing: bool, num_colors: int, max_workers: int = 4) -> None:
     with _lock:
         _state.update({
             "running": True,
@@ -76,6 +76,7 @@ def _run_extraction(root_dir: str, skip_existing: bool, num_colors: int) -> None
             root_dir=root_dir,
             skip_existing=skip_existing,
             num_colors=num_colors,
+            max_workers=max_workers,
         )
 
         # Store CSV in the scanned directory; record location in /data/.pme_last_scan
@@ -235,10 +236,11 @@ async def run_extraction(body: dict):
     root_dir = body.get("root_dir", os.environ.get("PME_ROOT_DIR", "/data"))
     skip_existing = body.get("skip_existing", True)
     num_colors = int(body.get("num_colors", os.environ.get("PME_NUM_COLORS", "5")))
+    max_workers = int(body.get("max_workers", os.environ.get("PME_MAX_WORKERS", "4")))
 
     t = threading.Thread(
         target=_run_extraction,
-        args=(root_dir, skip_existing, num_colors),
+        args=(root_dir, skip_existing, num_colors, max_workers),
         daemon=True,
     )
     t.start()
@@ -276,11 +278,14 @@ async def browse(path: str = "/data"):
 
 @app.get("/api/config")
 async def get_config():
+    import multiprocessing
     return JSONResponse({
         "root_dir": os.environ.get("PME_ROOT_DIR", "/data"),
         "execution_provider": os.environ.get("PME_EXECUTION_PROVIDER", "CPUExecutionProvider"),
         "num_colors": int(os.environ.get("PME_NUM_COLORS", "5")),
         "skip_existing": os.environ.get("PME_SKIP_EXISTING", "true").lower() == "true",
+        "max_workers": int(os.environ.get("PME_MAX_WORKERS", "4")),
+        "cpu_count": multiprocessing.cpu_count(),
     })
 
 

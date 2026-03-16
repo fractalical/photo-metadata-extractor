@@ -163,6 +163,47 @@ input:focus { border-color: var(--accent); }
 .checkbox-row input { width: 15px; height: 15px; cursor: pointer; accent-color: var(--accent); }
 .checkbox-row span { font-size: 14px; }
 
+/* ── Range slider ── */
+.slider-group { display: flex; flex-direction: column; gap: 5px; }
+.slider-group label { font-size: 13px; font-weight: 500; }
+.slider-row { display: flex; align-items: center; gap: 10px; }
+input[type="range"] {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 160px;
+  height: 4px;
+  border-radius: 2px;
+  background: var(--border);
+  outline: none;
+  accent-color: var(--accent);
+  cursor: pointer;
+}
+input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 16px; height: 16px;
+  border-radius: 50%;
+  background: var(--accent);
+  cursor: pointer;
+  transition: transform .1s;
+}
+input[type="range"]::-webkit-slider-thumb:hover { transform: scale(1.2); }
+input[type="range"]::-moz-range-thumb {
+  width: 16px; height: 16px;
+  border: none;
+  border-radius: 50%;
+  background: var(--accent);
+  cursor: pointer;
+}
+.slider-value {
+  font-size: 13px;
+  font-weight: 600;
+  font-family: ui-monospace, 'SF Mono', Menlo, monospace;
+  color: var(--accent);
+  min-width: 24px;
+  text-align: center;
+}
+.slider-hint { font-size: 11px; color: var(--text-muted); }
+
 /* ── Buttons ── */
 .btn {
   display: inline-flex;
@@ -375,6 +416,14 @@ tbody td { padding: 11px 16px; font-size: 14px; vertical-align: middle; }
           <label for="inp-colors" data-i18n="params.colors"></label>
           <input id="inp-colors" type="number" min="1" max="10" value="5">
         </div>
+        <div class="slider-group">
+          <label for="inp-workers" data-i18n="params.workers"></label>
+          <div class="slider-row">
+            <input type="range" id="inp-workers" min="1" max="4" value="4" oninput="document.getElementById('workers-val').textContent=this.value">
+            <span class="slider-value" id="workers-val">4</span>
+            <span class="slider-hint" id="workers-hint"></span>
+          </div>
+        </div>
         <label class="checkbox-row">
           <input type="checkbox" id="inp-skip" checked>
           <span data-i18n="params.skip"></span>
@@ -482,7 +531,7 @@ const T = {
     'config.title': 'Configuration', 'config.dir': 'Photos directory',
     'config.provider': 'Provider', 'config.colors': 'Colors',
     'params.title': 'Run parameters', 'params.dir': 'Scan directory',
-    'params.colors': 'Colors', 'params.skip': 'Skip already processed',
+    'params.colors': 'Colors', 'params.workers': 'Parallel workers', 'params.workers_hint': 'of {n} CPU cores', 'params.skip': 'Skip already processed',
     'btn.browse': 'Browse', 'btn.run': 'Run', 'btn.refresh': 'Refresh',
     'btn.cancel': 'Cancel', 'btn.select': 'Select',
     'progress.title': 'Progress', 'progress.images': '{p} / {t} images',
@@ -525,7 +574,7 @@ const T = {
     'config.title': 'Конфигурация', 'config.dir': 'Директория фото',
     'config.provider': 'Провайдер', 'config.colors': 'Цветов',
     'params.title': 'Параметры запуска', 'params.dir': 'Директория для сканирования',
-    'params.colors': 'Цветов', 'params.skip': 'Пропустить обработанные',
+    'params.colors': 'Цветов', 'params.workers': 'Параллельных потоков', 'params.workers_hint': 'из {n} ядер', 'params.skip': 'Пропустить обработанные',
     'btn.browse': 'Обзор', 'btn.run': 'Запустить', 'btn.refresh': 'Обновить',
     'btn.cancel': 'Отмена', 'btn.select': 'Выбрать',
     'progress.title': 'Прогресс', 'progress.images': '{p} / {t} изображений',
@@ -579,6 +628,10 @@ function applyLang() {
     el.textContent = t(el.dataset.i18n);
   });
   document.getElementById('search-inp').placeholder = t('search.ph');
+  const cpuHint = document.getElementById('workers-hint');
+  if (cpuHint.dataset.cpuCount) {
+    cpuHint.textContent = t('params.workers_hint', {n: cpuHint.dataset.cpuCount});
+  }
   // Re-render dynamic text that uses t()
   const statusRunning = document.getElementById('status-badge').classList.contains('status-running');
   document.getElementById('status-text').textContent = t(statusRunning ? 'status.running' : 'status.idle');
@@ -630,6 +683,15 @@ async function loadConfig() {
     document.getElementById('inp-dir').value = cfg.root_dir;
     document.getElementById('inp-colors').value = cfg.num_colors;
     document.getElementById('inp-skip').checked = cfg.skip_existing;
+    const cpuCount = cfg.cpu_count || 4;
+    const workers = Math.min(cfg.max_workers || 4, cpuCount);
+    const slider = document.getElementById('inp-workers');
+    slider.max = cpuCount;
+    slider.value = workers;
+    document.getElementById('workers-val').textContent = workers;
+    const hint = document.getElementById('workers-hint');
+    hint.dataset.cpuCount = cpuCount;
+    hint.textContent = t('params.workers_hint', {n: cpuCount});
   } catch {}
 }
 
@@ -639,6 +701,7 @@ async function startRun() {
     root_dir: document.getElementById('inp-dir').value,
     num_colors: parseInt(document.getElementById('inp-colors').value) || 5,
     skip_existing: document.getElementById('inp-skip').checked,
+    max_workers: parseInt(document.getElementById('inp-workers').value) || 4,
   };
   const res = await fetch('/api/run', {
     method: 'POST',
