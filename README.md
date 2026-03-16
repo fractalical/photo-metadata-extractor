@@ -1,26 +1,66 @@
 # Photo Metadata Extractor
 
-Рекурсивно сканирует директорию с фотографиями, извлекает метаданные с помощью ML-моделей (с ускорением на NPU) и сохраняет результат в CSV.
+Recursively scans a photo directory, extracts metadata using ML models (with optional NPU acceleration), and saves results to CSV. Includes a web UI for managing runs and browsing results.
 
-## Что извлекается
+## What Gets Extracted
 
-| Метаданные | Модель / метод | Устройство |
+| Metadata | Method | Device |
 |---|---|---|
-| Категория контента (город, природа, портрет, архитектура, еда, ...) | MobileNetV2 (ONNX) → маппинг ImageNet→категории | NPU / GPU / CPU |
-| Доминантные цвета (3-5 штук с HEX, именем, %) | Mini-Batch K-Means кластеризация | CPU |
-| Размеры (width × height) | OpenCV | CPU |
+| Content category (portrait, nature, food, architecture, vehicle…) | MobileNetV2 (ONNX) + face detection | NPU / GPU / CPU |
+| Dominant colors (3–5 with HEX, name, %) | Mini-Batch K-Means clustering | CPU |
+| Dimensions (width × height) | OpenCV | CPU |
 
-## Структура CSV
+## Quick Start
+
+### One-click launch
+
+**Linux / macOS:**
+```bash
+./start.sh
+```
+
+**Windows:**
+```
+start.bat
+```
+or in PowerShell:
+```powershell
+.\start.ps1
+```
+
+Then open **http://localhost:8080** in your browser.
+
+### Manual launch (Docker)
+
+```bash
+# Copy and edit settings
+cp .env.example .env
+
+# Start (builds on first run, ~2–3 min)
+docker compose up --build
+```
+
+Open **http://localhost:8080**, select your photos folder in the UI, and click **Run**.
+
+## Web UI
+
+| Tab | What it does |
+|-----|-------------|
+| **Run** | Browse & select folder, configure options, start extraction, watch live logs |
+| **Photos** | Search and filter processed photos, view color swatches and categories |
+| **Photo detail** | Full image + all metadata (click any row) |
+
+## CSV Structure
 
 ```
 id, file_name, absolute_path, file_extension, created_at, updated_at, last_processing_date, metadata
 ```
 
-Поле `metadata` — JSON с полной структурой:
+The `metadata` field is a JSON string:
 ```json
 {
-  "content_categories": ["nature", "animal"],
-  "content_scores": {"nature": 0.72, "animal": 0.15},
+  "content_categories": ["portrait", "nature"],
+  "content_scores": {"portrait": 0.82, "nature": 0.15},
   "dominant_colors": [
     {"hex": "#4A7C2E", "name": "darkolivegreen", "percentage": 35.2},
     {"hex": "#87CEEB", "name": "skyblue", "percentage": 28.1}
@@ -30,109 +70,110 @@ id, file_name, absolute_path, file_extension, created_at, updated_at, last_proce
 }
 ```
 
-## Быстрый старт
+## Environment Variables
 
-### Docker (рекомендуется)
+All parameters use the `PME_` prefix and can be set in `.env`:
+
+| Variable | Description | Default |
+|---|---|---|
+| `PHOTOS_DIR` | Host path to photos folder | `./photos` |
+| `BROWSE_ROOT` | Host path shown in the folder browser | `/home` (Linux) / `C:\Users` (Windows) |
+| `PORT` | Web UI port | `8080` |
+| `PME_ROOT_DIR` | Photos path inside container | `/data` |
+| `PME_CSV_FILENAME` | Output CSV filename | `photo_metadata.csv` |
+| `PME_NPU_DEVICE` | OpenVINO device: NPU / GPU / CPU | `NPU` |
+| `PME_SKIP_EXISTING` | Skip already-processed files | `true` |
+| `PME_NUM_COLORS` | Number of dominant colors to extract | `5` |
+| `PME_BATCH_SIZE` | Processing batch size | `16` |
+| `PME_CONFIDENCE_THRESHOLD` | Min confidence to show a category | `0.12` |
+
+## Platform Support
+
+| Platform | Status | Notes |
+|---|---|---|
+| Linux (x86_64) | ✅ Full support | Default, recommended |
+| macOS (Intel / Apple Silicon) | ✅ Works | CPU mode only |
+| Windows 10/11 | ✅ Works | Requires Docker Desktop + WSL2 |
+| Intel NPU (Meteor Lake / Arrow Lake) | ✅ Supported | Use `--profile intel` |
+| AMD Ryzen AI (7040 / 8040 series) | ⚠️ Experimental | Requires Vitis AI on host |
+| CPU (any hardware) | ✅ Default | No configuration needed |
+
+See [`docs/`](docs/) for platform-specific setup guides.
+
+## NPU Profiles (CLI, advanced)
 
 ```bash
-# Клонировать и настроить
-cp .env.example .env
-# Отредактировать .env — указать PHOTOS_DIR
+# Intel NPU via OpenVINO
+docker compose --profile intel up --build
 
-# Запустить
-PHOTOS_DIR=/path/to/photos docker compose up --build
+# AMD Ryzen AI XDNA NPU (requires host Vitis AI runtime)
+docker compose --profile amd up --build
 ```
 
-### NPU Device Passthrough
+### Intel NPU requirements
+1. Install NPU driver on the host
+2. Verify device: `ls /dev/accel/`
+3. If unavailable, the app falls back to CPU automatically
 
-Для Intel NPU (Meteor Lake+) убедитесь, что:
+### Model quantization for AMD NPU (INT8)
+```bash
+python -m src.models.quantize \
+    --input models/mobilenetv2-12.onnx \
+    --output models/mobilenetv2-12-int8.onnx \
+    --calibration-dir /path/to/sample/images
+```
 
-1. Установлен NPU-драйвер в хост-системе:
-   ```bash
-   # Проверить наличие устройства
-   ls /dev/accel/
-   ```
+## Incremental Processing
 
-2. В `docker-compose.yml` раскомментирована секция `devices`:
-   ```yaml
-   devices:
-     - /dev/accel:/dev/accel
-   ```
+By default the app:
+- Reads the existing CSV
+- Skips files already processed and unchanged
+- Re-processes files modified after last run
+- Appends new files
 
-3. Если NPU недоступен — приложение автоматически откатится на CPU.
+To re-process everything: uncheck **Skip already processed** in the UI, or use `PME_SKIP_EXISTING=false`.
 
-### Локальный запуск (без Docker)
+## Local Development (without Docker)
 
 ```bash
-# Установить зависимости
-pip install -e .
-
-# Запустить
+pip install -e ".[dev]"
 python -m src.main --root-dir /path/to/photos
 
-# Или через env
-PME_ROOT_DIR=/path/to/photos python -m src.main
+# Or via web UI locally
+pip install -e ".[web]"
+uvicorn src.web:app --host 0.0.0.0 --port 8080
 ```
 
-## CLI параметры
-
-```
---root-dir PATH       Корневая директория с фотографиями
---csv-filename NAME   Имя CSV файла (default: photo_metadata.csv)
---npu-device DEVICE   NPU | GPU | CPU (default: NPU)
---no-skip             Переобработать все файлы
---num-colors N        Кол-во доминантных цветов (default: 5)
-```
-
-## Переменные окружения
-
-Все параметры можно задать через env-переменные с префиксом `PME_`:
-
-| Переменная | Описание | Default |
-|---|---|---|
-| `PME_ROOT_DIR` | Корневая директория | (обязательно) |
-| `PME_CSV_FILENAME` | Имя CSV | `photo_metadata.csv` |
-| `PME_NPU_DEVICE` | Устройство OpenVINO | `NPU` |
-| `PME_SKIP_EXISTING` | Пропуск обработанных | `true` |
-| `PME_NUM_COLORS` | Кол-во цветов | `5` |
-| `PME_BATCH_SIZE` | Размер батча | `16` |
-| `PME_CONFIDENCE_THRESHOLD` | Мин. уверенность категории | `0.05` |
-
-## Инкрементальная обработка
-
-По умолчанию приложение:
-- Читает существующий CSV
-- Пропускает файлы, которые уже обработаны и не изменились
-- Переобрабатывает файлы, которые были модифицированы после последней обработки
-- Добавляет новые файлы
-
-Для полной переобработки: `--no-skip` или `PME_SKIP_EXISTING=false`.
-
-## Архитектура
+## Architecture
 
 ```
 src/
-├── main.py                 # CLI entry point
-├── config.py               # Pydantic Settings конфигурация
-├── scanner.py              # Рекурсивный скан директорий
-├── pipeline.py             # Оркестрация моделей
-├── csv_writer.py           # CSV чтение/запись
-├── schemas.py              # Pydantic-модели данных
+├── main.py                  # CLI entry point
+├── web.py                   # FastAPI web UI
+├── config.py                # Pydantic Settings
+├── scanner.py               # Recursive directory scanner
+├── pipeline.py              # Model orchestration + face detection
+├── csv_writer.py            # CSV read/write
+├── schemas.py               # Pydantic data models
+├── templates/               # Jinja2 HTML templates
+│   ├── index.html
+│   └── photo.html
 └── models/
-    ├── base.py             # Базовый класс ONNX + NPU fallback
-    ├── content_classifier.py   # MobileNetV2 классификатор
-    └── color_extractor.py      # K-Means доминантные цвета
+    ├── base.py              # Base ONNX class + NPU fallback
+    ├── content_classifier.py    # MobileNetV2 classifier
+    ├── color_extractor.py       # K-Means dominant colors
+    └── quantize.py              # INT8 quantization for AMD NPU
 ```
 
-## Поддерживаемые форматы
+## Supported Formats
 
-`.jpg`, `.jpeg`, `.png`, `.bmp`, `.tiff`, `.tif`, `.webp`
+`.jpg` `.jpeg` `.png` `.bmp` `.tiff` `.tif` `.webp`
 
-## Добавление новых моделей
+## Extending with New Models
 
-1. Создать класс, наследующий `BaseONNXModel` в `src/models/`
-2. Реализовать `preprocess()` и `predict()`
-3. Подключить в `ProcessingPipeline.__init__()` и `process_image()`
-4. Расширить `ImageMetadata` в `schemas.py`
+1. Create a class extending `BaseONNXModel` in `src/models/`
+2. Implement `preprocess()` and `predict()`
+3. Wire it into `ProcessingPipeline.__init__()` and `process_image()`
+4. Extend `ImageMetadata` in `schemas.py`
 
-Базовый класс автоматически обеспечит NPU→GPU→CPU fallback.
+The base class handles NPU → GPU → CPU fallback automatically.

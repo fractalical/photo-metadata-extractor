@@ -23,7 +23,7 @@ services:
       - "${PORT:-8080}:8080"
     volumes:
       - ${PHOTOS_DIR:-./photos}:/data:rw
-      - /home:/host:rw
+      - ${BROWSE_ROOT:-/home}:/host:rw
       - model-cache:/app/models
     environment:
       - PME_ROOT_DIR=/data
