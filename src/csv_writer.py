@@ -1,7 +1,7 @@
 """CSV persistence layer with incremental update support."""
 
 import csv
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path
 
 from loguru import logger
@@ -23,16 +23,18 @@ def load_existing_records(csv_path: Path) -> dict[str, PhotoRecord]:
             reader = csv.DictReader(f)
             for row in reader:
                 try:
+                    def _parse_dt(s: str) -> datetime:
+                        dt = datetime.fromisoformat(s)
+                        return dt if dt.tzinfo else dt.replace(tzinfo=timezone.utc)
+
                     record = PhotoRecord(
                         id=int(row["id"]),
                         file_name=row["file_name"],
                         absolute_path=row["absolute_path"],
                         file_extension=row["file_extension"],
-                        created_at=datetime.fromisoformat(row["created_at"]),
-                        updated_at=datetime.fromisoformat(row["updated_at"]),
-                        last_processing_date=datetime.fromisoformat(
-                            row["last_processing_date"]
-                        ),
+                        created_at=_parse_dt(row["created_at"]),
+                        updated_at=_parse_dt(row["updated_at"]),
+                        last_processing_date=_parse_dt(row["last_processing_date"]),
                         metadata=row["metadata"],
                     )
                     records[record.absolute_path] = record
@@ -80,6 +82,6 @@ def build_record(
         file_extension=file_extension,
         created_at=created_at,
         updated_at=updated_at,
-        last_processing_date=datetime.now(),
+        last_processing_date=datetime.now(tz=timezone.utc),
         metadata=metadata.model_dump_json(),
     )
