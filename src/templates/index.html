@@ -403,7 +403,7 @@ tbody td { padding: 11px 16px; font-size: 14px; vertical-align: middle; }
         <div class="form-group">
           <label for="inp-dir" data-i18n="params.dir"></label>
           <div style="display:flex;gap:6px">
-            <input id="inp-dir" type="text" value="/data">
+            <input id="inp-dir" type="text" value="/data" oninput="localStorage.setItem('pme_dir',this.value)">
             <button type="button" class="btn btn-ghost" onclick="openFileMgr()" title="">
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                 <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/>
@@ -414,18 +414,18 @@ tbody td { padding: 11px 16px; font-size: 14px; vertical-align: middle; }
         </div>
         <div class="form-group">
           <label for="inp-colors" data-i18n="params.colors"></label>
-          <input id="inp-colors" type="number" min="1" max="10" value="5">
+          <input id="inp-colors" type="number" min="1" max="10" value="5" oninput="localStorage.setItem('pme_colors',this.value)">
         </div>
         <div class="slider-group">
           <label for="inp-workers" data-i18n="params.workers"></label>
           <div class="slider-row">
-            <input type="range" id="inp-workers" min="1" max="4" value="4" oninput="document.getElementById('workers-val').textContent=this.value">
+            <input type="range" id="inp-workers" min="1" max="4" value="4" oninput="document.getElementById('workers-val').textContent=this.value;localStorage.setItem('pme_workers',this.value)">
             <span class="slider-value" id="workers-val">4</span>
             <span class="slider-hint" id="workers-hint"></span>
           </div>
         </div>
         <label class="checkbox-row">
-          <input type="checkbox" id="inp-skip" checked>
+          <input type="checkbox" id="inp-skip" checked onchange="localStorage.setItem('pme_skip',this.checked)">
           <span data-i18n="params.skip"></span>
         </label>
         <button id="run-btn" class="btn btn-primary" onclick="startRun()">
@@ -680,11 +680,13 @@ async function loadConfig() {
     document.getElementById('cfg-dir').textContent = cfg.root_dir;
     document.getElementById('cfg-provider').textContent = cfg.execution_provider;
     document.getElementById('cfg-colors').textContent = cfg.num_colors;
-    document.getElementById('inp-dir').value = cfg.root_dir;
-    document.getElementById('inp-colors').value = cfg.num_colors;
-    document.getElementById('inp-skip').checked = cfg.skip_existing;
+    document.getElementById('inp-dir').value = localStorage.getItem('pme_dir') ?? cfg.root_dir;
+    document.getElementById('inp-colors').value = localStorage.getItem('pme_colors') ?? cfg.num_colors;
+    const savedSkip = localStorage.getItem('pme_skip');
+    document.getElementById('inp-skip').checked = savedSkip !== null ? savedSkip === 'true' : cfg.skip_existing;
     const cpuCount = cfg.cpu_count || 4;
-    const workers = Math.min(cfg.max_workers || 4, cpuCount);
+    const savedWorkers = localStorage.getItem('pme_workers');
+    const workers = savedWorkers ? Math.min(parseInt(savedWorkers), cpuCount) : Math.min(cfg.max_workers || 4, cpuCount);
     const slider = document.getElementById('inp-workers');
     slider.max = cpuCount;
     slider.value = workers;
@@ -829,7 +831,8 @@ function renderPhotos(photos) {
 }
 
 function openPhoto(id) {
-  window.location.href = '/photo/' + id;
+  const dir = document.getElementById('inp-dir').value;
+  window.location.href = '/photo/' + id + (dir ? '?dir=' + encodeURIComponent(dir) : '');
 }
 
 // ── File Manager ──────────────────────────────────────────────────────────────
