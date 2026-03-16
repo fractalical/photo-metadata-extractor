@@ -31,7 +31,7 @@ class AppConfig(BaseSettings):
         description="Max number of content categories per image",
     )
     confidence_threshold: float = Field(
-        default=0.05,
+        default=0.12,
         description="Minimum confidence to include a category",
     )
     image_extensions: set[str] = Field(

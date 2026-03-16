@@ -9,6 +9,33 @@ from src.models.color_extractor import ColorExtractor
 from src.models.content_classifier import ContentClassifier
 from src.schemas import ContentCategory, ImageMetadata, ScanResult
 
+# These ImageNet-derived categories are often false positives when
+# a face is confidently detected, so we remove them in that case.
+_FACE_FALSE_POSITIVES = {ContentCategory.VEHICLE, ContentCategory.SPORT}
+
+
+def _face_confidence(image: np.ndarray, cascades: list) -> float:
+    """Detect faces and return a portrait confidence score (0–1).
+
+    Scales by face-area ratio: face covering ~5% of the frame → ~0.5.
+    """
+    gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+    h, w = image.shape[:2]
+    total_face_area = 0
+
+    for cascade in cascades:
+        faces = cascade.detectMultiScale(
+            gray, scaleFactor=1.1, minNeighbors=4, minSize=(30, 30)
+        )
+        if len(faces) > 0:
+            total_face_area += sum(int(fw) * int(fh) for (_, _, fw, fh) in faces)
+
+    if total_face_area == 0:
+        return 0.0
+
+    ratio = total_face_area / (w * h)
+    return float(min(ratio * 5.0, 1.0))
+
 
 class ProcessingPipeline:
     """Orchestrates model inference for a single image or batch."""
@@ -26,6 +53,17 @@ class ProcessingPipeline:
         logger.info("Initializing color extractor...")
         self.color_extractor = ColorExtractor(num_colors=config.num_colors)
 
+        # Face detectors — OpenCV built-in Haar cascades, no extra deps
+        self._face_cascades = [
+            cv2.CascadeClassifier(
+                cv2.data.haarcascades + "haarcascade_frontalface_default.xml"
+            ),
+            cv2.CascadeClassifier(
+                cv2.data.haarcascades + "haarcascade_profileface.xml"
+            ),
+        ]
+        logger.info("Face detector initialized.")
+
     def process_image(self, scan: ScanResult) -> ImageMetadata | None:
         """Process a single image file and return metadata.
 
@@ -38,7 +76,7 @@ class ProcessingPipeline:
 
         h, w = image.shape[:2]
 
-        # Content classification (runs on NPU)
+        # Content classification (MobileNetV2 / NPU)
         try:
             cls_result = self.classifier.predict(image)
             categories = [
@@ -54,6 +92,29 @@ class ProcessingPipeline:
             logger.error("Classification failed for {}: {}", scan.path, e)
             categories = [ContentCategory.OTHER]
             scores = {"other": 1.0}
+
+        # Face detection — overrides / corrects portrait classification
+        try:
+            face_conf = _face_confidence(image, self._face_cascades)
+            if face_conf >= 0.1:
+                # Set portrait score from face detector
+                scores[ContentCategory.PORTRAIT.value] = round(face_conf, 4)
+                if ContentCategory.PORTRAIT not in categories:
+                    categories = [ContentCategory.PORTRAIT] + [
+                        c for c in categories if c != ContentCategory.PORTRAIT
+                    ]
+
+                # Remove known false positives when portrait is strong
+                if face_conf >= 0.3:
+                    categories = [c for c in categories if c not in _FACE_FALSE_POSITIVES]
+                    for fp in _FACE_FALSE_POSITIVES:
+                        scores.pop(fp.value, None)
+
+                # Re-sort by score
+                categories.sort(key=lambda c: -scores.get(c.value, 0))
+
+        except Exception as e:
+            logger.warning("Face detection failed for {}: {}", scan.path, e)
 
         # Dominant colors (CPU, fast)
         try:
