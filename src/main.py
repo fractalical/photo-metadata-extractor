@@ -7,7 +7,9 @@ Usage:
 
 import argparse
 import sys
+import threading
 import time
+from concurrent.futures import ThreadPoolExecutor, as_completed
 
 from loguru import logger
 
@@ -143,34 +145,45 @@ def main() -> None:
 
     from tqdm import tqdm
 
-    for scan in tqdm(to_process, desc="Processing", unit="img"):
-        metadata = pipeline.process_image(scan)
-        if metadata is None:
-            failed_count += 1
-            continue
+    lock = threading.Lock()
 
-        abs_path = str(scan.path)
-        record_id = (
-            existing[abs_path].id if abs_path in existing else next_id
-        )
-        if abs_path not in existing:
-            next_id += 1
+    with ThreadPoolExecutor(max_workers=config.max_workers) as executor:
+        futures = {executor.submit(pipeline.process_image, scan): scan for scan in to_process}
 
-        record = build_record(
-            record_id=record_id,
-            file_name=scan.file_name,
-            absolute_path=abs_path,
-            file_extension=scan.extension,
-            created_at=scan.created_at,
-            updated_at=scan.updated_at,
-            metadata=metadata,
-        )
-        all_records[abs_path] = record
-        processed_count += 1
+        for future in tqdm(as_completed(futures), total=len(to_process), desc="Processing", unit="img"):
+            scan = futures[future]
+            try:
+                metadata = future.result()
+            except Exception as exc:
+                logger.warning("Unexpected error processing {}: {}", scan.file_name, exc)
+                metadata = None
 
-        # Periodic save every batch_size images
-        if processed_count % config.batch_size == 0:
-            save_records(config.csv_path, list(all_records.values()))
+            if metadata is None:
+                with lock:
+                    failed_count += 1
+                continue
+
+            abs_path = str(scan.path)
+            with lock:
+                record_id = existing[abs_path].id if abs_path in existing else next_id
+                if abs_path not in existing:
+                    next_id += 1
+                record = build_record(
+                    record_id=record_id,
+                    file_name=scan.file_name,
+                    absolute_path=abs_path,
+                    file_extension=scan.extension,
+                    created_at=scan.created_at,
+                    updated_at=scan.updated_at,
+                    metadata=metadata,
+                )
+                all_records[abs_path] = record
+                processed_count += 1
+                should_save = processed_count % config.batch_size == 0
+                snapshot = list(all_records.values()) if should_save else None
+
+            if should_save:
+                save_records(config.csv_path, snapshot)
 
     # 5. Final save
     save_records(config.csv_path, list(all_records.values()))
