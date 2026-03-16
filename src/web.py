@@ -5,6 +5,7 @@ import json
 import os
 import threading
 import time
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from pathlib import Path
 
 import urllib.parse
@@ -57,7 +58,7 @@ def _log_sink(message) -> None:
             _state["logs"] = _state["logs"][-1000:]
 
 
-def _run_extraction(root_dir: str, skip_existing: bool, num_colors: int) -> None:
+def _run_extraction(root_dir: str, skip_existing: bool, num_colors: int, max_workers: int = 4) -> None:
     with _lock:
         _state.update({
             "running": True,
@@ -75,6 +76,7 @@ def _run_extraction(root_dir: str, skip_existing: bool, num_colors: int) -> None
             root_dir=root_dir,
             skip_existing=skip_existing,
             num_colors=num_colors,
+            max_workers=max_workers,
         )
 
         # Store CSV in the scanned directory; record location in /data/.pme_last_scan
@@ -113,31 +115,44 @@ def _run_extraction(root_dir: str, skip_existing: bool, num_colors: int) -> None
         next_id = max((r.id for r in existing.values()), default=0) + 1
         all_records = dict(existing)
         processed = 0
+        _proc_lock = threading.Lock()
 
-        for scan in to_process:
-            metadata = pipeline.process_image(scan)
-            abs_path = str(scan.path)
+        with ThreadPoolExecutor(max_workers=config.max_workers) as executor:
+            futures = {executor.submit(pipeline.process_image, scan): scan for scan in to_process}
 
-            if metadata is not None:
-                record_id = existing[abs_path].id if abs_path in existing else next_id
-                if abs_path not in existing:
-                    next_id += 1
-                all_records[abs_path] = build_record(
-                    record_id=record_id,
-                    file_name=scan.file_name,
-                    absolute_path=abs_path,
-                    file_extension=scan.extension,
-                    created_at=scan.created_at,
-                    updated_at=scan.updated_at,
-                    metadata=metadata,
-                )
-                processed += 1
+            for future in as_completed(futures):
+                scan = futures[future]
+                try:
+                    metadata = future.result()
+                except Exception as exc:
+                    logger.warning("Unexpected error processing {}: {}", scan.file_name, exc)
+                    metadata = None
 
-            with _lock:
-                _state["progress"] += 1
+                abs_path = str(scan.path)
 
-            if processed % config.batch_size == 0 and processed > 0:
-                save_records(csv_path, list(all_records.values()))
+                if metadata is not None:
+                    with _proc_lock:
+                        record_id = existing[abs_path].id if abs_path in existing else next_id
+                        if abs_path not in existing:
+                            next_id += 1
+                        all_records[abs_path] = build_record(
+                            record_id=record_id,
+                            file_name=scan.file_name,
+                            absolute_path=abs_path,
+                            file_extension=scan.extension,
+                            created_at=scan.created_at,
+                            updated_at=scan.updated_at,
+                            metadata=metadata,
+                        )
+                        processed += 1
+                        should_save = processed % config.batch_size == 0
+                        snapshot = list(all_records.values()) if should_save else None
+
+                    if should_save:
+                        save_records(csv_path, snapshot)
+
+                with _lock:
+                    _state["progress"] += 1
 
         save_records(csv_path, list(all_records.values()))
         Path("/data/.pme_last_scan").write_text(str(csv_path), encoding="utf-8")
@@ -221,10 +236,11 @@ async def run_extraction(body: dict):
     root_dir = body.get("root_dir", os.environ.get("PME_ROOT_DIR", "/data"))
     skip_existing = body.get("skip_existing", True)
     num_colors = int(body.get("num_colors", os.environ.get("PME_NUM_COLORS", "5")))
+    max_workers = int(body.get("max_workers", os.environ.get("PME_MAX_WORKERS", "4")))
 
     t = threading.Thread(
         target=_run_extraction,
-        args=(root_dir, skip_existing, num_colors),
+        args=(root_dir, skip_existing, num_colors, max_workers),
         daemon=True,
     )
     t.start()
@@ -262,11 +278,14 @@ async def browse(path: str = "/data"):
 
 @app.get("/api/config")
 async def get_config():
+    import multiprocessing
     return JSONResponse({
         "root_dir": os.environ.get("PME_ROOT_DIR", "/data"),
         "execution_provider": os.environ.get("PME_EXECUTION_PROVIDER", "CPUExecutionProvider"),
         "num_colors": int(os.environ.get("PME_NUM_COLORS", "5")),
         "skip_existing": os.environ.get("PME_SKIP_EXISTING", "true").lower() == "true",
+        "max_workers": int(os.environ.get("PME_MAX_WORKERS", "4")),
+        "cpu_count": multiprocessing.cpu_count(),
     })
 
 
