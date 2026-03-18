@@ -41,10 +41,7 @@ Write-Host ""
 Write-Host "Pulling image (first run downloads ~500 MB, subsequent runs are instant)..."
 docker pull $image
 Write-Host ""
-Write-Host "Starting... Press Ctrl+C to stop."
-Write-Host ""
-
-docker run --rm `
+docker run -d --rm `
     --name photo-metadata-extractor-web `
     -p "${port}:8080" `
     -v "$($env:BROWSE_ROOT):/data:rw" `
@@ -54,6 +51,22 @@ docker run --rm `
     -e "PME_NUM_COLORS=$numColors" `
     -e "PME_SKIP_EXISTING=$skipExisting" `
     -e "BROWSE_ROOT=$($env:BROWSE_ROOT)" `
-    $image
+    $image | Out-Null
 
-Read-Host "Press Enter to exit"
+Write-Host "Started! UI: http://localhost:$port" -ForegroundColor Green
+Write-Host ""
+Write-Host "Press Q to stop the container and exit." -ForegroundColor Yellow
+Write-Host ""
+
+while ($true) {
+    if ([Console]::KeyAvailable) {
+        $key = [Console]::ReadKey($true)
+        if ($key.Key -eq 'Q') { break }
+    }
+    Start-Sleep -Milliseconds 200
+}
+
+Write-Host ""
+Write-Host "Stopping container..."
+docker stop photo-metadata-extractor-web 2>&1 | Out-Null
+Write-Host "Done."

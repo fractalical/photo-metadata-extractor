@@ -48,10 +48,7 @@ echo ""
 echo "Pulling image (first run downloads ~500 MB, subsequent runs are instant)..."
 docker pull "$IMAGE"
 echo ""
-echo "Starting... Press Ctrl+C to stop."
-echo ""
-
-docker run --rm \
+docker run -d --rm \
     --name photo-metadata-extractor-web \
     -p "${PORT}:8080" \
     -v "${BROWSE_ROOT}:/data:rw" \
@@ -61,4 +58,26 @@ docker run --rm \
     -e "PME_NUM_COLORS=${NUM_COLORS:-5}" \
     -e "PME_SKIP_EXISTING=${SKIP_EXISTING:-true}" \
     -e "BROWSE_ROOT=${BROWSE_ROOT}" \
-    "$IMAGE"
+    "$IMAGE" >/dev/null 2>&1
+
+echo "Started! UI: http://localhost:${PORT}"
+echo ""
+echo "Press Q to stop the container and exit."
+echo ""
+
+cleanup() {
+    echo ""
+    echo "Stopping container..."
+    docker stop photo-metadata-extractor-web >/dev/null 2>&1
+    echo "Done."
+    exit 0
+}
+
+trap cleanup INT TERM
+
+while true; do
+    read -rsn1 -t 1 key 2>/dev/null
+    if [ "$key" = "q" ] || [ "$key" = "Q" ]; then
+        cleanup
+    fi
+done
