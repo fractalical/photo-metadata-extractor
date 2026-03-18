@@ -38,11 +38,24 @@ fi
 export BROWSE_ROOT
 
 PORT="${PORT:-8080}"
+IMAGE="ghcr.io/fractalical/photo-metadata-extractor:latest"
 
 echo "  UI:  http://localhost:${PORT}"
 echo ""
-echo "Starting... (first run may take 2–5 minutes to build)"
-echo "Press Ctrl+C to stop."
+echo "Pulling image (first run downloads ~500 MB, subsequent runs are instant)..."
+docker pull "$IMAGE"
+echo ""
+echo "Starting... Press Ctrl+C to stop."
 echo ""
 
-docker compose up --build --remove-orphans
+docker run --rm \
+    --name photo-metadata-extractor-web \
+    -p "${PORT}:8080" \
+    -v "${BROWSE_ROOT}:/data:rw" \
+    -v "pme-model-cache:/app/models" \
+    -e PME_ROOT_DIR=/data \
+    -e PME_EXECUTION_PROVIDER=CPUExecutionProvider \
+    -e "PME_NUM_COLORS=${NUM_COLORS:-5}" \
+    -e "PME_SKIP_EXISTING=${SKIP_EXISTING:-true}" \
+    -e "BROWSE_ROOT=${BROWSE_ROOT}" \
+    "$IMAGE"
