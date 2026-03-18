@@ -177,9 +177,14 @@ def quantize_model(
         except ImportError:
             logger.info("AMD Quark not available, falling back to onnxruntime quantizer")
 
-    quantize_with_onnxruntime(
-        input_model, output_model, calibration_images, input_name
-    )
+    try:
+        quantize_with_onnxruntime(
+            input_model, output_model, calibration_images, input_name
+        )
+    except ModuleNotFoundError as e:
+        raise ModuleNotFoundError(
+            f"{e}. Install with: pip install onnx>=1.16.0"
+        ) from e
     return output_model
 
 
