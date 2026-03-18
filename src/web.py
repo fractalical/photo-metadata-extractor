@@ -18,6 +18,7 @@ from loguru import logger
 
 from src.config import AppConfig
 from src.csv_writer import build_record, load_existing_records, save_records
+from src.models.content_classifier import auto_quantize, needs_quantization
 from src.pipeline import ProcessingPipeline
 from src.scanner import scan_directory
 
@@ -115,6 +116,25 @@ def _run_extraction(root_dir: str, skip_existing: bool, num_colors: int, max_wor
         if not to_process:
             logger.bind(log_key="log.nothing_to_do").info("Nothing to process. CSV is up to date.")
             return
+
+        # ── Auto-quantize for AMD NPU if INT8 model is missing ────────────────
+        fp32_path = Path(config.model_cache_dir) / "mobilenetv2-12.onnx"
+        int8_path = Path(config.model_cache_dir) / "mobilenetv2-12-int8.onnx"
+        if needs_quantization(fp32_path, int8_path):
+            n = min(100, len(to_process))
+            logger.bind(log_key="log.quantize_start", log_params={"n": n}).info(
+                "AMD NPU detected — auto-creating INT8 model from {} sample images…", n
+            )
+            ok = auto_quantize(fp32_path, int8_path, [s.path for s in to_process], num_samples=100)
+            if ok:
+                logger.bind(log_key="log.quantize_done").info(
+                    "INT8 model ready — processing will use the NPU."
+                )
+            else:
+                logger.bind(log_key="log.quantize_failed").warning(
+                    "Auto-quantization failed, falling back to FP32 on CPU."
+                )
+        # ──────────────────────────────────────────────────────────────────────
 
         thread_local = threading.local()
 

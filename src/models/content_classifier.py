@@ -141,6 +141,46 @@ def _classify_label(label: str) -> ContentCategory:
     return ContentCategory.OTHER
 
 
+def needs_quantization(fp32_path: Path, int8_path: Path) -> bool:
+    """Return True when AMD NPU is present but INT8 model is missing."""
+    from src.models.base import detect_npu_vendor
+    return detect_npu_vendor() == "amd" and fp32_path.exists() and not int8_path.exists()
+
+
+def auto_quantize(
+    fp32_path: Path,
+    int8_path: Path,
+    image_paths: list[Path],
+    num_samples: int = 100,
+) -> bool:
+    """Quantize fp32_path → int8_path using image_paths as calibration data.
+
+    Returns True on success, False on any error.
+    """
+    import shutil
+    import tempfile
+
+    from src.models.quantize import quantize_model
+
+    try:
+        samples = image_paths[:num_samples]
+        if not samples:
+            raise ValueError("No calibration images available")
+        with tempfile.TemporaryDirectory() as tmp:
+            for p in samples:
+                shutil.copy2(p, tmp)
+            quantize_model(
+                input_model=fp32_path,
+                output_model=int8_path,
+                calibration_dir=Path(tmp),
+                num_samples=num_samples,
+            )
+        return True
+    except Exception as exc:
+        logger.warning("Auto-quantization failed: {}", exc)
+        return False
+
+
 class ContentClassifier(BaseONNXModel):
     """MobileNetV2-based content classifier with ImageNet→category mapping.
 
@@ -191,15 +231,8 @@ class ContentClassifier(BaseONNXModel):
             return int8_path
         elif is_amd and not int8_path.exists():
             logger.warning(
-                "AMD NPU detected but no INT8 model found at {}. "
-                "Run quantization first:\n"
-                "  python -m src.models.quantize \\\n"
-                "    --input {} \\\n"
-                "    --output {} \\\n"
-                "    --calibration-dir /path/to/sample/images\n"
+                "AMD NPU detected but INT8 model not ready at {}. "
                 "Falling back to FP32 model (will run on CPU).",
-                int8_path,
-                fp32_path,
                 int8_path,
             )
 
