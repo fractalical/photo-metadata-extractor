@@ -45,10 +45,9 @@ echo.
 echo Pulling image (first run downloads ~500 MB, subsequent runs are instant)...
 docker pull %IMAGE%
 echo.
-echo Starting... Press Ctrl+C to stop.
-echo.
 
-docker run --rm ^
+:: Run container in detached mode
+docker run -d --rm ^
     --name photo-metadata-extractor-web ^
     -p %PORT%:8080 ^
     -v "%BROWSE_ROOT%:/data:rw" ^
@@ -58,6 +57,19 @@ docker run --rm ^
     -e PME_NUM_COLORS=%NUM_COLORS% ^
     -e PME_SKIP_EXISTING=%SKIP_EXISTING% ^
     -e BROWSE_ROOT=%BROWSE_ROOT% ^
-    %IMAGE%
+    %IMAGE% >nul 2>&1
 
+echo Started! UI: http://localhost:%PORT%
+echo.
+echo Press Q to stop the container and exit.
+echo.
+
+:waitloop
+choice /c QC /n /t 1 /d C >nul 2>&1
+if errorlevel 2 goto waitloop
+:: Q pressed
+echo.
+echo Stopping container...
+docker stop photo-metadata-extractor-web >nul 2>&1
+echo Done.
 pause
