@@ -145,7 +145,7 @@ body {
 .form-group { display: flex; flex-direction: column; gap: 5px; }
 .form-group label { font-size: 13px; font-weight: 500; }
 
-input[type="text"], input[type="number"] {
+input[type="text"], input[type="number"], select {
   background: var(--bg);
   border: 1px solid var(--border);
   border-radius: var(--radius-sm);
@@ -157,7 +157,8 @@ input[type="text"], input[type="number"] {
 }
 input[type="text"] { width: 300px; }
 input[type="number"] { width: 76px; }
-input:focus { border-color: var(--accent); }
+select { cursor: pointer; }
+input:focus, select:focus { border-color: var(--accent); }
 
 .checkbox-row { display: flex; align-items: center; gap: 8px; padding-bottom: 1px; cursor: pointer; }
 .checkbox-row input { width: 15px; height: 15px; cursor: pointer; accent-color: var(--accent); }
@@ -413,6 +414,14 @@ tbody td { padding: 11px 16px; font-size: 14px; vertical-align: middle; }
           </div>
         </div>
         <div class="form-group">
+          <label for="inp-provider" data-i18n="params.provider"></label>
+          <select id="inp-provider" onchange="localStorage.setItem('pme_provider',this.value)">
+            <option value="CPUExecutionProvider" data-i18n-opt="provider.cpu"></option>
+            <option value="OpenVINOExecutionProvider" data-i18n-opt="provider.intel"></option>
+            <option value="VitisAIExecutionProvider" data-i18n-opt="provider.amd"></option>
+          </select>
+        </div>
+        <div class="form-group">
           <label for="inp-colors" data-i18n="params.colors"></label>
           <input id="inp-colors" type="number" min="1" max="10" value="5" oninput="localStorage.setItem('pme_colors',this.value)">
         </div>
@@ -531,6 +540,10 @@ const T = {
     'config.title': 'Configuration', 'config.dir': 'Photos directory',
     'config.provider': 'Provider', 'config.colors': 'Colors',
     'params.title': 'Run parameters', 'params.dir': 'Scan directory',
+    'params.provider': 'Execution Provider',
+    'provider.cpu': 'CPU (CPUExecutionProvider)',
+    'provider.intel': 'Intel NPU via OpenVINO',
+    'provider.amd': 'AMD Ryzen AI XDNA NPU (requires host Vitis AI runtime)',
     'params.colors': 'Colors', 'params.workers': 'Parallel workers', 'params.workers_hint': 'of {n} CPU cores', 'params.skip': 'Skip already processed',
     'btn.browse': 'Browse', 'btn.run': 'Run', 'btn.refresh': 'Refresh',
     'btn.cancel': 'Cancel', 'btn.select': 'Select',
@@ -574,6 +587,10 @@ const T = {
     'config.title': 'Конфигурация', 'config.dir': 'Директория фото',
     'config.provider': 'Провайдер', 'config.colors': 'Цветов',
     'params.title': 'Параметры запуска', 'params.dir': 'Директория для сканирования',
+    'params.provider': 'Провайдер выполнения',
+    'provider.cpu': 'CPU (CPUExecutionProvider)',
+    'provider.intel': 'Intel NPU через OpenVINO',
+    'provider.amd': 'AMD Ryzen AI XDNA NPU (требует Vitis AI runtime на хосте)',
     'params.colors': 'Цветов', 'params.workers': 'Параллельных потоков', 'params.workers_hint': 'из {n} ядер', 'params.skip': 'Пропустить обработанные',
     'btn.browse': 'Обзор', 'btn.run': 'Запустить', 'btn.refresh': 'Обновить',
     'btn.cancel': 'Отмена', 'btn.select': 'Выбрать',
@@ -626,6 +643,9 @@ function applyLang() {
   document.getElementById('lang-btn').textContent = lang === 'ru' ? 'EN' : 'RU';
   document.querySelectorAll('[data-i18n]').forEach(el => {
     el.textContent = t(el.dataset.i18n);
+  });
+  document.querySelectorAll('[data-i18n-opt]').forEach(el => {
+    el.textContent = t(el.dataset.i18nOpt);
   });
   document.getElementById('search-inp').placeholder = t('search.ph');
   const cpuHint = document.getElementById('workers-hint');
@@ -682,6 +702,11 @@ async function loadConfig() {
     document.getElementById('cfg-colors').textContent = cfg.num_colors;
     document.getElementById('inp-dir').value = localStorage.getItem('pme_dir') ?? cfg.root_dir;
     document.getElementById('inp-colors').value = localStorage.getItem('pme_colors') ?? cfg.num_colors;
+    const savedProvider = localStorage.getItem('pme_provider');
+    const providerSel = document.getElementById('inp-provider');
+    const providerVal = savedProvider || cfg.execution_provider || 'CPUExecutionProvider';
+    const opt = providerSel.querySelector(`option[value="${providerVal}"]`);
+    if (opt) opt.selected = true;
     const savedSkip = localStorage.getItem('pme_skip');
     document.getElementById('inp-skip').checked = savedSkip !== null ? savedSkip === 'true' : cfg.skip_existing;
     const cpuCount = cfg.cpu_count || 4;
@@ -701,6 +726,7 @@ async function loadConfig() {
 async function startRun() {
   const body = {
     root_dir: document.getElementById('inp-dir').value,
+    execution_provider: document.getElementById('inp-provider').value,
     num_colors: parseInt(document.getElementById('inp-colors').value) || 5,
     skip_existing: document.getElementById('inp-skip').checked,
     max_workers: parseInt(document.getElementById('inp-workers').value) || 4,

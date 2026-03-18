@@ -58,7 +58,7 @@ def _log_sink(message) -> None:
             _state["logs"] = _state["logs"][-1000:]
 
 
-def _run_extraction(root_dir: str, skip_existing: bool, num_colors: int, max_workers: int = 4) -> None:
+def _run_extraction(root_dir: str, skip_existing: bool, num_colors: int, max_workers: int = 4, execution_provider: str = "CPUExecutionProvider") -> None:
     with _lock:
         _state.update({
             "running": True,
@@ -77,6 +77,7 @@ def _run_extraction(root_dir: str, skip_existing: bool, num_colors: int, max_wor
             skip_existing=skip_existing,
             num_colors=num_colors,
             max_workers=max_workers,
+            execution_provider=execution_provider,
         )
 
         # Store CSV in the scanned directory; record location in /data/.pme_last_scan
@@ -245,10 +246,11 @@ async def run_extraction(body: dict):
     skip_existing = body.get("skip_existing", True)
     num_colors = int(body.get("num_colors", os.environ.get("PME_NUM_COLORS", "5")))
     max_workers = int(body.get("max_workers", os.environ.get("PME_MAX_WORKERS", "4")))
+    execution_provider = body.get("execution_provider", os.environ.get("PME_EXECUTION_PROVIDER", "CPUExecutionProvider"))
 
     t = threading.Thread(
         target=_run_extraction,
-        args=(root_dir, skip_existing, num_colors, max_workers),
+        args=(root_dir, skip_existing, num_colors, max_workers, execution_provider),
         daemon=True,
     )
     t.start()
