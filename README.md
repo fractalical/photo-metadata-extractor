@@ -16,17 +16,17 @@ Download one script for your OS and run it — no git clone needed.
 
 **Linux / macOS:**
 ```bash
-curl -fsSL https://raw.githubusercontent.com/fractalical/photo-metadata-extractor/main/start.sh -o start.sh
-chmod +x start.sh && ./start.sh
+curl -fsSL https://raw.githubusercontent.com/fractalical/photo-metadata-extractor/main/photo-metadata-extractor.sh -o photo-metadata-extractor.sh
+chmod +x photo-metadata-extractor.sh && ./photo-metadata-extractor.sh
 ```
 
 **Windows (PowerShell):**
 ```powershell
-Invoke-WebRequest https://raw.githubusercontent.com/fractalical/photo-metadata-extractor/main/start.ps1 -OutFile start.ps1
-.\start.ps1
+Invoke-WebRequest https://raw.githubusercontent.com/fractalical/photo-metadata-extractor/main/photo-metadata-extractor.ps1 -OutFile photo-metadata-extractor.ps1
+.\photo-metadata-extractor.ps1
 ```
 
-**Windows (CMD):** download [start.bat](https://raw.githubusercontent.com/fractalical/photo-metadata-extractor/main/start.bat) and double-click it.
+**Windows (CMD):** download [photo-metadata-extractor.bat](https://raw.githubusercontent.com/fractalical/photo-metadata-extractor/main/photo-metadata-extractor.bat) and double-click it.
 
 The script pulls the pre-built Docker image (~500 MB on first run, cached after that) and opens the UI at **http://localhost:8080**.
 
