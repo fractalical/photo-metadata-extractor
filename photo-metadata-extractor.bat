@@ -39,6 +39,9 @@ set IMAGE=ghcr.io/fractalical/photo-metadata-extractor:latest
 
 echo   UI: http://localhost:%PORT%
 echo.
+echo Removing old container if exists...
+docker rm -f photo-metadata-extractor-web >nul 2>&1
+echo.
 echo Pulling image (first run downloads ~500 MB, subsequent runs are instant)...
 docker pull %IMAGE%
 echo.
