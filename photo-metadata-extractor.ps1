@@ -35,6 +35,9 @@ $image = "ghcr.io/fractalical/photo-metadata-extractor:latest"
 
 Write-Host "  UI: http://localhost:$port" -ForegroundColor Green
 Write-Host ""
+Write-Host "Removing old container if exists..."
+docker rm -f photo-metadata-extractor-web 2>&1 | Out-Null
+Write-Host ""
 Write-Host "Pulling image (first run downloads ~500 MB, subsequent runs are instant)..."
 docker pull $image
 Write-Host ""
