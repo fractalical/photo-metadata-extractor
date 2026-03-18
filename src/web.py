@@ -30,6 +30,7 @@ templates.env.filters["urlencode"] = urllib.parse.quote
 # ── Extraction state ──────────────────────────────────────────────────────────
 
 _lock = threading.Lock()
+_stop_event = threading.Event()
 _state: dict = {
     "running": False,
     "logs": [],
@@ -38,6 +39,7 @@ _state: dict = {
     "error": None,
     "start_time": None,
     "stats": None,
+    "stopped": False,
 }
 
 
@@ -58,7 +60,8 @@ def _log_sink(message) -> None:
             _state["logs"] = _state["logs"][-1000:]
 
 
-def _run_extraction(root_dir: str, skip_existing: bool, num_colors: int, max_workers: int = 4) -> None:
+def _run_extraction(root_dir: str, skip_existing: bool, num_colors: int, max_workers: int = 4, execution_provider: str = "CPUExecutionProvider") -> None:
+    _stop_event.clear()
     with _lock:
         _state.update({
             "running": True,
@@ -68,6 +71,7 @@ def _run_extraction(root_dir: str, skip_existing: bool, num_colors: int, max_wor
             "error": None,
             "start_time": time.monotonic(),
             "stats": None,
+            "stopped": False,
         })
 
     sink_id = logger.add(_log_sink, format="{message}", level="INFO")
@@ -77,6 +81,7 @@ def _run_extraction(root_dir: str, skip_existing: bool, num_colors: int, max_wor
             skip_existing=skip_existing,
             num_colors=num_colors,
             max_workers=max_workers,
+            execution_provider=execution_provider,
         )
 
         # Store CSV in the scanned directory; record location in /data/.pme_last_scan
@@ -124,11 +129,16 @@ def _run_extraction(root_dir: str, skip_existing: bool, num_colors: int, max_wor
         processed = 0
         _proc_lock = threading.Lock()
 
+        user_stopped = False
         with ThreadPoolExecutor(max_workers=config.max_workers,
                                 initializer=_init_worker) as executor:
             futures = {executor.submit(_process, scan): scan for scan in to_process}
 
             for future in as_completed(futures):
+                if _stop_event.is_set():
+                    user_stopped = True
+                    break
+
                 scan = futures[future]
                 try:
                     metadata = future.result()
@@ -165,14 +175,19 @@ def _run_extraction(root_dir: str, skip_existing: bool, num_colors: int, max_wor
         save_records(csv_path, list(all_records.values()))
         Path("/data/.pme_last_scan").write_text(str(csv_path), encoding="utf-8")
 
-        elapsed = time.monotonic() - _state["start_time"]
-        logger.bind(
-            log_key="log.done",
-            log_params={"n": processed, "s": f"{elapsed:.1f}"},
-        ).info("Done! Processed {} images in {:.1f}s", processed, elapsed)
+        if user_stopped:
+            logger.bind(log_key="log.stopped").warning("Processing stopped by user")
+            with _lock:
+                _state["stopped"] = True
+        else:
+            elapsed = time.monotonic() - _state["start_time"]
+            logger.bind(
+                log_key="log.done",
+                log_params={"n": processed, "s": f"{elapsed:.1f}"},
+            ).info("Done! Processed {} images in {:.1f}s", processed, elapsed)
 
-        with _lock:
-            _state["stats"] = {"processed": processed, "elapsed": round(elapsed, 1)}
+            with _lock:
+                _state["stats"] = {"processed": processed, "elapsed": round(elapsed, 1)}
 
     except Exception as e:
         logger.bind(log_key="log.extract_error", log_params={"e": str(e)}).error(
@@ -245,10 +260,11 @@ async def run_extraction(body: dict):
     skip_existing = body.get("skip_existing", True)
     num_colors = int(body.get("num_colors", os.environ.get("PME_NUM_COLORS", "5")))
     max_workers = int(body.get("max_workers", os.environ.get("PME_MAX_WORKERS", "4")))
+    execution_provider = body.get("execution_provider", os.environ.get("PME_EXECUTION_PROVIDER", "CPUExecutionProvider"))
 
     t = threading.Thread(
         target=_run_extraction,
-        args=(root_dir, skip_existing, num_colors, max_workers),
+        args=(root_dir, skip_existing, num_colors, max_workers, execution_provider),
         daemon=True,
     )
     t.start()
@@ -259,6 +275,15 @@ async def run_extraction(body: dict):
 async def get_status():
     with _lock:
         return JSONResponse(dict(_state))
+
+
+@app.post("/api/stop")
+async def stop_extraction():
+    with _lock:
+        if not _state["running"]:
+            return JSONResponse({"error": "Not running"}, status_code=409)
+    _stop_event.set()
+    return JSONResponse({"status": "stopping"})
 
 
 @app.get("/api/browse")

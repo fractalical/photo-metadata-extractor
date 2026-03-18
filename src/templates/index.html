@@ -145,7 +145,7 @@ body {
 .form-group { display: flex; flex-direction: column; gap: 5px; }
 .form-group label { font-size: 13px; font-weight: 500; }
 
-input[type="text"], input[type="number"] {
+input[type="text"], input[type="number"], select {
   background: var(--bg);
   border: 1px solid var(--border);
   border-radius: var(--radius-sm);
@@ -157,7 +157,8 @@ input[type="text"], input[type="number"] {
 }
 input[type="text"] { width: 300px; }
 input[type="number"] { width: 76px; }
-input:focus { border-color: var(--accent); }
+select { cursor: pointer; }
+input:focus, select:focus { border-color: var(--accent); }
 
 .checkbox-row { display: flex; align-items: center; gap: 8px; padding-bottom: 1px; cursor: pointer; }
 .checkbox-row input { width: 15px; height: 15px; cursor: pointer; accent-color: var(--accent); }
@@ -222,6 +223,8 @@ input[type="range"]::-moz-range-thumb {
 .btn:disabled { opacity: .45; cursor: not-allowed; }
 .btn-primary { background: var(--accent); color: #fff; }
 .btn-primary:hover:not(:disabled) { opacity: .88; }
+.btn-danger { background: var(--danger); color: #fff; }
+.btn-danger:hover:not(:disabled) { opacity: .88; }
 .btn-ghost { background: transparent; border: 1px solid var(--border); color: var(--text); }
 .btn-ghost:hover:not(:disabled) { background: var(--bg); }
 
@@ -242,13 +245,15 @@ input[type="range"]::-moz-range-thumb {
   line-height: 1.7;
   scroll-behavior: smooth;
 }
-.log-line { display: flex; gap: 10px; }
+.log-line { display: flex; gap: 10px; border-radius: 3px; padding: 0 4px; margin: 0 -4px; }
 .log-time    { color: #636366; flex-shrink: 0; }
 .log-INFO    { color: #30d158; flex-shrink: 0; min-width: 50px; }
 .log-WARNING { color: #ff9f0a; flex-shrink: 0; min-width: 50px; }
 .log-ERROR   { color: #ff453a; flex-shrink: 0; min-width: 50px; }
 .log-text    { color: #e5e5ea; }
 .log-placeholder { color: #636366; }
+.log-line-WARNING { background: rgba(255, 149, 0, 0.12); }
+.log-line-ERROR   { background: rgba(255, 69, 58, 0.12); }
 
 /* ── Photos tab ── */
 .toolbar { display: flex; align-items: center; gap: 12px; margin-bottom: 16px; flex-wrap: wrap; }
@@ -413,6 +418,14 @@ tbody td { padding: 11px 16px; font-size: 14px; vertical-align: middle; }
           </div>
         </div>
         <div class="form-group">
+          <label for="inp-provider" data-i18n="params.provider"></label>
+          <select id="inp-provider" onchange="localStorage.setItem('pme_provider',this.value)">
+            <option value="CPUExecutionProvider" data-i18n-opt="provider.cpu"></option>
+            <option value="OpenVINOExecutionProvider" data-i18n-opt="provider.intel"></option>
+            <option value="VitisAIExecutionProvider" data-i18n-opt="provider.amd"></option>
+          </select>
+        </div>
+        <div class="form-group">
           <label for="inp-colors" data-i18n="params.colors"></label>
           <input id="inp-colors" type="number" min="1" max="10" value="5" oninput="localStorage.setItem('pme_colors',this.value)">
         </div>
@@ -431,6 +444,10 @@ tbody td { padding: 11px 16px; font-size: 14px; vertical-align: middle; }
         <button id="run-btn" class="btn btn-primary" onclick="startRun()">
           <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor"><polygon points="5,3 19,12 5,21"/></svg>
           <span data-i18n="btn.run"></span>
+        </button>
+        <button id="stop-btn" class="btn btn-danger" onclick="stopRun()" style="display:none">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor"><rect x="4" y="4" width="16" height="16" rx="2"/></svg>
+          <span data-i18n="btn.stop"></span>
         </button>
       </div>
     </div>
@@ -531,8 +548,12 @@ const T = {
     'config.title': 'Configuration', 'config.dir': 'Photos directory',
     'config.provider': 'Provider', 'config.colors': 'Colors',
     'params.title': 'Run parameters', 'params.dir': 'Scan directory',
+    'params.provider': 'Execution Provider',
+    'provider.cpu': 'CPU (CPUExecutionProvider)',
+    'provider.intel': 'Intel NPU via OpenVINO',
+    'provider.amd': 'AMD Ryzen AI XDNA NPU (requires host Vitis AI runtime)',
     'params.colors': 'Colors', 'params.workers': 'Parallel workers', 'params.workers_hint': 'of {n} CPU cores', 'params.skip': 'Skip already processed',
-    'btn.browse': 'Browse', 'btn.run': 'Run', 'btn.refresh': 'Refresh',
+    'btn.browse': 'Browse', 'btn.run': 'Run', 'btn.stop': 'Stop', 'btn.refresh': 'Refresh',
     'btn.cancel': 'Cancel', 'btn.select': 'Select',
     'progress.title': 'Progress', 'progress.images': '{p} / {t} images',
     'logs.title': 'Logs', 'logs.placeholder': 'Waiting for start…',
@@ -544,6 +565,7 @@ const T = {
     'fm.title': 'Select Directory', 'fm.up': '.. (up one level)',
     'fm.empty': 'No subfolders', 'fm.error': 'Failed to load directory',
     'err.start': 'Failed to start',
+    'log.stopped': 'Processing stopped by user',
     'log.scanning': 'Scanning directory: {path}',
     'log.scan_found': 'Found {n} image files',
     'log.file_error': 'Cannot read file {path}: {e}',
@@ -574,8 +596,12 @@ const T = {
     'config.title': 'Конфигурация', 'config.dir': 'Директория фото',
     'config.provider': 'Провайдер', 'config.colors': 'Цветов',
     'params.title': 'Параметры запуска', 'params.dir': 'Директория для сканирования',
+    'params.provider': 'Провайдер выполнения',
+    'provider.cpu': 'CPU (CPUExecutionProvider)',
+    'provider.intel': 'Intel NPU через OpenVINO',
+    'provider.amd': 'AMD Ryzen AI XDNA NPU (требует Vitis AI runtime на хосте)',
     'params.colors': 'Цветов', 'params.workers': 'Параллельных потоков', 'params.workers_hint': 'из {n} ядер', 'params.skip': 'Пропустить обработанные',
-    'btn.browse': 'Обзор', 'btn.run': 'Запустить', 'btn.refresh': 'Обновить',
+    'btn.browse': 'Обзор', 'btn.run': 'Запустить', 'btn.stop': 'Остановить', 'btn.refresh': 'Обновить',
     'btn.cancel': 'Отмена', 'btn.select': 'Выбрать',
     'progress.title': 'Прогресс', 'progress.images': '{p} / {t} изображений',
     'logs.title': 'Логи', 'logs.placeholder': 'Ожидание запуска…',
@@ -587,6 +613,7 @@ const T = {
     'fm.title': 'Выбор директории', 'fm.up': '.. (на уровень выше)',
     'fm.empty': 'Вложенных папок нет', 'fm.error': 'Ошибка загрузки директории',
     'err.start': 'Ошибка запуска',
+    'log.stopped': 'Обработка остановлена пользователем',
     'log.scanning': 'Сканирование директории: {path}',
     'log.scan_found': 'Найдено {n} файлов изображений',
     'log.file_error': 'Не удалось прочитать файл {path}: {e}',
@@ -626,6 +653,9 @@ function applyLang() {
   document.getElementById('lang-btn').textContent = lang === 'ru' ? 'EN' : 'RU';
   document.querySelectorAll('[data-i18n]').forEach(el => {
     el.textContent = t(el.dataset.i18n);
+  });
+  document.querySelectorAll('[data-i18n-opt]').forEach(el => {
+    el.textContent = t(el.dataset.i18nOpt);
   });
   document.getElementById('search-inp').placeholder = t('search.ph');
   const cpuHint = document.getElementById('workers-hint');
@@ -682,6 +712,11 @@ async function loadConfig() {
     document.getElementById('cfg-colors').textContent = cfg.num_colors;
     document.getElementById('inp-dir').value = localStorage.getItem('pme_dir') ?? cfg.root_dir;
     document.getElementById('inp-colors').value = localStorage.getItem('pme_colors') ?? cfg.num_colors;
+    const savedProvider = localStorage.getItem('pme_provider');
+    const providerSel = document.getElementById('inp-provider');
+    const providerVal = savedProvider || cfg.execution_provider || 'CPUExecutionProvider';
+    const opt = providerSel.querySelector(`option[value="${providerVal}"]`);
+    if (opt) opt.selected = true;
     const savedSkip = localStorage.getItem('pme_skip');
     document.getElementById('inp-skip').checked = savedSkip !== null ? savedSkip === 'true' : cfg.skip_existing;
     const cpuCount = cfg.cpu_count || 4;
@@ -701,6 +736,7 @@ async function loadConfig() {
 async function startRun() {
   const body = {
     root_dir: document.getElementById('inp-dir').value,
+    execution_provider: document.getElementById('inp-provider').value,
     num_colors: parseInt(document.getElementById('inp-colors').value) || 5,
     skip_existing: document.getElementById('inp-skip').checked,
     max_workers: parseInt(document.getElementById('inp-workers').value) || 4,
@@ -727,21 +763,25 @@ async function pollStatus() {
   try { s = await fetch('/api/status').then(r => r.json()); }
   catch { return; }
 
-  const badge = document.getElementById('status-badge');
-  const dot   = document.getElementById('status-dot');
-  const txt   = document.getElementById('status-text');
-  const btn   = document.getElementById('run-btn');
+  const badge   = document.getElementById('status-badge');
+  const dot     = document.getElementById('status-dot');
+  const txt     = document.getElementById('status-text');
+  const runBtn  = document.getElementById('run-btn');
+  const stopBtn = document.getElementById('stop-btn');
 
   if (s.running) {
-    badge.className = 'status-badge status-running';
-    dot.className   = 'status-dot pulse';
-    txt.textContent = t('status.running');
-    btn.disabled    = true;
+    badge.className    = 'status-badge status-running';
+    dot.className      = 'status-dot pulse';
+    txt.textContent    = t('status.running');
+    runBtn.disabled    = true;
+    stopBtn.style.display = '';
   } else {
-    badge.className = 'status-badge status-idle';
-    dot.className   = 'status-dot';
-    txt.textContent = t('status.idle');
-    btn.disabled    = false;
+    badge.className    = 'status-badge status-idle';
+    dot.className      = 'status-dot';
+    txt.textContent    = t('status.idle');
+    runBtn.disabled    = false;
+    stopBtn.style.display = 'none';
+    stopBtn.disabled   = false;
     if (pollTimer) { clearInterval(pollTimer); pollTimer = null; }
   }
 
@@ -761,7 +801,8 @@ async function pollStatus() {
 
   newLogs.forEach(log => {
     const div = document.createElement('div');
-    div.className = 'log-line';
+    const lvlClass = (log.level === 'WARNING' || log.level === 'ERROR') ? ` log-line-${log.level}` : '';
+    div.className = 'log-line' + lvlClass;
     const text = log.key ? t(log.key, log.params || {}) : log.text;
     div.innerHTML = `<span class="log-time">${log.time}</span>`
       + `<span class="log-${log.level}">${log.level}</span>`
@@ -769,6 +810,11 @@ async function pollStatus() {
     logEl.appendChild(div);
   });
   if (newLogs.length) logEl.scrollTop = logEl.scrollHeight;
+}
+
+async function stopRun() {
+  document.getElementById('stop-btn').disabled = true;
+  await fetch('/api/stop', { method: 'POST' });
 }
 
 function esc(s) {
