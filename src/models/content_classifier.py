@@ -144,7 +144,7 @@ def _classify_label(label: str) -> ContentCategory:
 def needs_quantization(fp32_path: Path, int8_path: Path) -> bool:
     """Return True when AMD NPU is present but INT8 model is missing."""
     from src.models.base import detect_npu_vendor
-    return detect_npu_vendor() == "amd" and fp32_path.exists() and not int8_path.exists()
+    return detect_npu_vendor() == "amd" and not int8_path.exists()
 
 
 def auto_quantize(
@@ -163,6 +163,11 @@ def auto_quantize(
     from src.models.quantize import quantize_model
 
     try:
+        if not fp32_path.exists():
+            import urllib.request
+            fp32_path.parent.mkdir(parents=True, exist_ok=True)
+            logger.info("Downloading FP32 model for quantization...")
+            urllib.request.urlretrieve(_MODEL_URL, str(fp32_path))
         samples = image_paths[:num_samples]
         if not samples:
             raise ValueError("No calibration images available")
