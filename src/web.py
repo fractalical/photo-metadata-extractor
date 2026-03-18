@@ -120,7 +120,7 @@ def _run_extraction(root_dir: str, skip_existing: bool, num_colors: int, max_wor
         # ── Auto-quantize for AMD NPU if INT8 model is missing ────────────────
         fp32_path = Path(config.model_cache_dir) / "mobilenetv2-12.onnx"
         int8_path = Path(config.model_cache_dir) / "mobilenetv2-12-int8.onnx"
-        if needs_quantization(fp32_path, int8_path):
+        if needs_quantization(fp32_path, int8_path, execution_provider):
             n = min(100, len(to_process))
             logger.bind(log_key="log.quantize_start", log_params={"n": n}).info(
                 "AMD NPU detected — auto-creating INT8 model from {} sample images…", n

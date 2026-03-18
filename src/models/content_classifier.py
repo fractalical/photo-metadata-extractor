@@ -141,10 +141,14 @@ def _classify_label(label: str) -> ContentCategory:
     return ContentCategory.OTHER
 
 
-def needs_quantization(fp32_path: Path, int8_path: Path) -> bool:
-    """Return True when AMD NPU is present but INT8 model is missing."""
+def needs_quantization(fp32_path: Path, int8_path: Path, execution_provider: str = "auto") -> bool:
+    """Return True when Vitis AI EP is requested but INT8 model is missing."""
     from src.models.base import detect_npu_vendor
-    return detect_npu_vendor() == "amd" and not int8_path.exists()
+    is_vitis = (
+        execution_provider == "VitisAIExecutionProvider"
+        or (execution_provider == "auto" and detect_npu_vendor() == "amd")
+    )
+    return is_vitis and not int8_path.exists()
 
 
 def auto_quantize(
