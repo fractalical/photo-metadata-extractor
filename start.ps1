@@ -11,23 +11,46 @@ try { docker info 2>&1 | Out-Null } catch {
     Read-Host "Press Enter to exit"; exit 1
 }
 
-# Read PORT from .env if present
-$port = "8080"
+# Defaults
+$port         = "8080"
+$numColors    = "5"
+$skipExisting = "true"
+
+# Read settings from .env if present
 if (Test-Path ".env") {
     Get-Content ".env" | ForEach-Object {
-        if ($_ -match "^PORT=(.+)$") { $port = $Matches[1].Trim() }
+        if ($_ -match "^PORT=(.+)$")          { $port         = $Matches[1].Trim() }
+        if ($_ -match "^NUM_COLORS=(.+)$")    { $numColors    = $Matches[1].Trim() }
+        if ($_ -match "^SKIP_EXISTING=(.+)$") { $skipExisting = $Matches[1].Trim() }
+        if ($_ -match "^BROWSE_ROOT=(.+)$")   { $env:BROWSE_ROOT = $Matches[1].Trim() }
     }
 }
 
 # Auto-detect BROWSE_ROOT from user profile parent (e.g. C:\Users)
-$env:BROWSE_ROOT = Split-Path -Parent $env:USERPROFILE
+if (-not $env:BROWSE_ROOT) {
+    $env:BROWSE_ROOT = Split-Path -Parent $env:USERPROFILE
+}
+
+$image = "ghcr.io/fractalical/photo-metadata-extractor:latest"
 
 Write-Host "  UI: http://localhost:$port" -ForegroundColor Green
 Write-Host ""
-Write-Host "Starting... (first run may take 2-5 minutes to build)"
-Write-Host "Press Ctrl+C to stop."
+Write-Host "Pulling image (first run downloads ~500 MB, subsequent runs are instant)..."
+docker pull $image
+Write-Host ""
+Write-Host "Starting... Press Ctrl+C to stop."
 Write-Host ""
 
-docker compose up --build --remove-orphans
+docker run --rm `
+    --name photo-metadata-extractor-web `
+    -p "${port}:8080" `
+    -v "$($env:BROWSE_ROOT):/data:rw" `
+    -v "pme-model-cache:/app/models" `
+    -e PME_ROOT_DIR=/data `
+    -e PME_EXECUTION_PROVIDER=CPUExecutionProvider `
+    -e "PME_NUM_COLORS=$numColors" `
+    -e "PME_SKIP_EXISTING=$skipExisting" `
+    -e "BROWSE_ROOT=$($env:BROWSE_ROOT)" `
+    $image
 
 Read-Host "Press Enter to exit"

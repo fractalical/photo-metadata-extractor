@@ -12,35 +12,25 @@ Recursively scans a photo directory, extracts metadata using ML models (with opt
 
 ## Quick Start
 
-### One-click launch
+Download one script for your OS and run it — no git clone needed.
 
 **Linux / macOS:**
 ```bash
-./start.sh
+curl -fsSL https://raw.githubusercontent.com/fractalical/photo-metadata-extractor/main/start.sh -o start.sh
+chmod +x start.sh && ./start.sh
 ```
 
-**Windows:**
-```
-start.bat
-```
-or in PowerShell:
+**Windows (PowerShell):**
 ```powershell
+Invoke-WebRequest https://raw.githubusercontent.com/fractalical/photo-metadata-extractor/main/start.ps1 -OutFile start.ps1
 .\start.ps1
 ```
 
-Then open **http://localhost:8080** in your browser.
+**Windows (CMD):** download [start.bat](https://raw.githubusercontent.com/fractalical/photo-metadata-extractor/main/start.bat) and double-click it.
 
-### Manual launch (Docker)
+The script pulls the pre-built Docker image (~500 MB on first run, cached after that) and opens the UI at **http://localhost:8080**.
 
-```bash
-# Copy and edit settings
-cp .env.example .env
-
-# Start (builds on first run, ~2–3 min)
-docker compose up --build
-```
-
-Open **http://localhost:8080**, select your photos folder in the UI, and click **Run**.
+> **Requires:** [Docker](https://docs.docker.com/get-docker/) installed and running.
 
 ## Web UI
 
