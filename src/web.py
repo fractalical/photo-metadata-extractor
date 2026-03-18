@@ -30,6 +30,7 @@ templates.env.filters["urlencode"] = urllib.parse.quote
 # ── Extraction state ──────────────────────────────────────────────────────────
 
 _lock = threading.Lock()
+_stop_event = threading.Event()
 _state: dict = {
     "running": False,
     "logs": [],
@@ -38,6 +39,7 @@ _state: dict = {
     "error": None,
     "start_time": None,
     "stats": None,
+    "stopped": False,
 }
 
 
@@ -59,6 +61,7 @@ def _log_sink(message) -> None:
 
 
 def _run_extraction(root_dir: str, skip_existing: bool, num_colors: int, max_workers: int = 4, execution_provider: str = "CPUExecutionProvider") -> None:
+    _stop_event.clear()
     with _lock:
         _state.update({
             "running": True,
@@ -68,6 +71,7 @@ def _run_extraction(root_dir: str, skip_existing: bool, num_colors: int, max_wor
             "error": None,
             "start_time": time.monotonic(),
             "stats": None,
+            "stopped": False,
         })
 
     sink_id = logger.add(_log_sink, format="{message}", level="INFO")
@@ -125,11 +129,16 @@ def _run_extraction(root_dir: str, skip_existing: bool, num_colors: int, max_wor
         processed = 0
         _proc_lock = threading.Lock()
 
+        user_stopped = False
         with ThreadPoolExecutor(max_workers=config.max_workers,
                                 initializer=_init_worker) as executor:
             futures = {executor.submit(_process, scan): scan for scan in to_process}
 
             for future in as_completed(futures):
+                if _stop_event.is_set():
+                    user_stopped = True
+                    break
+
                 scan = futures[future]
                 try:
                     metadata = future.result()
@@ -166,14 +175,19 @@ def _run_extraction(root_dir: str, skip_existing: bool, num_colors: int, max_wor
         save_records(csv_path, list(all_records.values()))
         Path("/data/.pme_last_scan").write_text(str(csv_path), encoding="utf-8")
 
-        elapsed = time.monotonic() - _state["start_time"]
-        logger.bind(
-            log_key="log.done",
-            log_params={"n": processed, "s": f"{elapsed:.1f}"},
-        ).info("Done! Processed {} images in {:.1f}s", processed, elapsed)
+        if user_stopped:
+            logger.bind(log_key="log.stopped").warning("Processing stopped by user")
+            with _lock:
+                _state["stopped"] = True
+        else:
+            elapsed = time.monotonic() - _state["start_time"]
+            logger.bind(
+                log_key="log.done",
+                log_params={"n": processed, "s": f"{elapsed:.1f}"},
+            ).info("Done! Processed {} images in {:.1f}s", processed, elapsed)
 
-        with _lock:
-            _state["stats"] = {"processed": processed, "elapsed": round(elapsed, 1)}
+            with _lock:
+                _state["stats"] = {"processed": processed, "elapsed": round(elapsed, 1)}
 
     except Exception as e:
         logger.bind(log_key="log.extract_error", log_params={"e": str(e)}).error(
@@ -261,6 +275,15 @@ async def run_extraction(body: dict):
 async def get_status():
     with _lock:
         return JSONResponse(dict(_state))
+
+
+@app.post("/api/stop")
+async def stop_extraction():
+    with _lock:
+        if not _state["running"]:
+            return JSONResponse({"error": "Not running"}, status_code=409)
+    _stop_event.set()
+    return JSONResponse({"status": "stopping"})
 
 
 @app.get("/api/browse")
