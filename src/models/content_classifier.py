@@ -43,7 +43,7 @@ _CATEGORY_MAP: list[tuple[list[str], ContentCategory]] = [
             "panda", "jellyfish", "coral", "starfish", "sea urchin",
             "goldfish", "puffer", "eel", "ray", "dolphin",
         ],
-        ContentCategory.NATURE,
+        ContentCategory.ANIMAL,
     ),
     # Vehicles
     (
@@ -73,6 +73,8 @@ _CATEGORY_MAP: list[tuple[list[str], ContentCategory]] = [
             "ball", "tennis", "soccer", "basketball", "baseball", "golf",
             "ski", "snowboard", "surfboard", "volleyball", "rugby",
             "ping-pong", "racket", "barbell", "dumbbell",
+            "parachute", "punching bag", "parallel bars", "balance beam",
+            "horizontal bar", "swimming", "bicycle helmet",
         ],
         ContentCategory.SPORT,
     ),
@@ -83,6 +85,9 @@ _CATEGORY_MAP: list[tuple[list[str], ContentCategory]] = [
             "cathedral", "monastery", "lighthouse", "skyscraper", "dome",
             "triumphal arch", "obelisk", "library", "theater", "cinema",
             "barn", "greenhouse", "beacon",
+            "hospital", "school", "hotel", "prison", "stadium", "arena",
+            "factory", "warehouse", "hangar", "silo", "windmill", "pier",
+            "aqueduct", "viaduct", "gate",
         ],
         ContentCategory.ARCHITECTURE,
     ),
@@ -90,6 +95,8 @@ _CATEGORY_MAP: list[tuple[list[str], ContentCategory]] = [
         [
             "street", "traffic", "crosswalk", "parking", "highway",
             "streetcar", "trolleybus", "mailbox", "pay-phone",
+            "traffic light", "parking meter", "fire hydrant", "bench",
+            "flagpole", "fountain", "market", "alley", "overpass",
         ],
         ContentCategory.CITY,
     ),
@@ -125,7 +132,11 @@ _CATEGORY_MAP: list[tuple[list[str], ContentCategory]] = [
     ),
     # Portrait (very few ImageNet classes map here; we rely on face detection separately)
     (
-        ["mask", "wig", "sunglasses", "sunglass"],
+        [
+            "mask", "wig", "sunglasses", "sunglass",
+            "bridegroom", "mortarboard", "suit", "uniform",
+            "swimsuit", "bikini",
+        ],
         ContentCategory.PORTRAIT,
     ),
 ]
