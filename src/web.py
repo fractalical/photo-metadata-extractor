@@ -137,9 +137,14 @@ def _run_extraction(root_dir: str, skip_existing: bool, num_colors: int, max_wor
         # ──────────────────────────────────────────────────────────────────────
 
         thread_local = threading.local()
+        _worker_pipelines: list = []
+        _workers_lock = threading.Lock()
 
         def _init_worker():
-            thread_local.pipeline = ProcessingPipeline(config)
+            p = ProcessingPipeline(config)
+            thread_local.pipeline = p
+            with _workers_lock:
+                _worker_pipelines.append(p)
 
         def _process(scan):
             return thread_local.pipeline.process_image(scan)
@@ -150,8 +155,9 @@ def _run_extraction(root_dir: str, skip_existing: bool, num_colors: int, max_wor
         _proc_lock = threading.Lock()
 
         user_stopped = False
-        with ThreadPoolExecutor(max_workers=config.max_workers,
-                                initializer=_init_worker) as executor:
+        executor = ThreadPoolExecutor(max_workers=config.max_workers,
+                                     initializer=_init_worker)
+        try:
             futures = {executor.submit(_process, scan): scan for scan in to_process}
 
             for future in as_completed(futures):
@@ -191,6 +197,16 @@ def _run_extraction(root_dir: str, skip_existing: bool, num_colors: int, max_wor
 
                 with _lock:
                     _state["progress"] += 1
+        finally:
+            if user_stopped:
+                executor.shutdown(wait=False, cancel_futures=True)
+            else:
+                executor.shutdown(wait=True)
+            for p in _worker_pipelines:
+                try:
+                    p.close()
+                except Exception:
+                    pass
 
         save_records(csv_path, list(all_records.values()))
         Path("/data/.pme_last_scan").write_text(str(csv_path), encoding="utf-8")

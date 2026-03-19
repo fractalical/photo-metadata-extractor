@@ -131,6 +131,12 @@ class ProcessingPipeline:
             height=h,
         )
 
+    def close(self) -> None:
+        """Release ONNX session and CV resources."""
+        self.classifier.session = None
+        self.color_extractor = None
+        self._face_cascades = []
+
     def process_batch(
         self, scans: list[ScanResult]
     ) -> list[tuple[ScanResult, ImageMetadata | None]]:
